@@ -151,3 +151,4 @@ export function mockCollect(orderRef: string): BankIDCollectResponse {
 export function mockCancel(orderRef: string): void {
   mockOrders.delete(orderRef);
 }
+

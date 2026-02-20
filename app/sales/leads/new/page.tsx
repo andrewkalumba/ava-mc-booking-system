@@ -1,21 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Sidebar from '@/components/Sidebar';
 import BankIDModal from '@/components/bankIdModel';
 import type { BankIDResult, Demo } from '@/types';
-import DemoCard from '@/components/DemoCard';
-import Field from '@/components/Field';
 
 type TabType = 'bankid' | 'manual' | 'phone';
 
 const NewLeadPage = () => {
+  const router = useRouter();
   const t = useTranslations();
 
   const [activeTab, setActiveTab] = useState<TabType>('bankid');
   const [showBankID, setShowBankID] = useState(false);
   const [bankIDData, setBankIDData] = useState<BankIDResult | null>(null);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Check if user is logged in
+    const storedUser = localStorage.getItem('user');
+    if (!storedUser) {
+      router.push('/auth/login');
+      return;
+    }
+    setUser(JSON.parse(storedUser));
+  }, [router]);
 
   // Form data
   const [formData, setFormData] = useState({
@@ -57,31 +68,42 @@ const NewLeadPage = () => {
     { name: 'GSX-S750', price: '112k kr', match: 74 },
   ];
 
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#f5f7fa]">
+        <div className="text-center">
+          <div className="text-5xl mb-4">🔄</div>
+          <p className="text-slate-600">{t('dashboard.loading')}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-[#f5f7fa]">
       {/* Sidebar */}
       <Sidebar />
 
       {/* Main Content */}
-      <div className="ml-57.5 flex-1 flex">
+      <div className="lg:ml-64 flex-1 flex flex-col lg:flex-row">
         {/* Center Content */}
-        <div className="flex-1 p-8 max-w-225">
+        <div className="flex-1 p-4 md:p-6 lg:p-8">
           {/* Breadcrumb */}
           <div className="text-sm text-slate-500 mb-4">
             {t('newLead.breadcrumb.sales')} → <span className="text-slate-700">{t('newLead.breadcrumb.newLead')}</span>
           </div>
 
           {/* Title */}
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold text-slate-900">{t('newLead.title')}</h1>
+          <div className="flex items-center justify-between mb-4 md:mb-6">
+            <h1 className="text-2xl md:text-3xl font-bold text-slate-900">{t('newLead.title')}</h1>
           </div>
 
           {/* Identification Method Tabs */}
-          <div className="bg-white rounded-lg border border-slate-200 p-6 mb-6">
-            <h2 className="text-lg font-semibold text-slate-900 mb-2">{t('newLead.identifyCustomer')}</h2>
-            <p className="text-sm text-slate-500 mb-4">{t('newLead.identifyCustomerDesc')}</p>
+          <div className="bg-white rounded-lg border border-slate-200 p-4 md:p-6 mb-4 md:mb-6">
+            <h2 className="text-base md:text-lg font-semibold text-slate-900 mb-2">{t('newLead.identifyCustomer')}</h2>
+            <p className="text-xs md:text-sm text-slate-500 mb-4">{t('newLead.identifyCustomerDesc')}</p>
 
-            <div className="flex gap-3 mb-6">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mb-6">
               <button
                 onClick={() => {
                   setActiveTab('bankid');
@@ -280,10 +302,10 @@ const NewLeadPage = () => {
         </div>
 
         {/* Right Sidebar - Matching Vehicles */}
-        <div className="w-90 p-8 bg-white border-l border-slate-200">
+        <div className="lg:w-80 xl:w-96 p-4 md:p-6 lg:p-8 bg-white border-t lg:border-t-0 lg:border-l border-slate-200">
           {/* BankID + Roaring Info */}
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <h3 className="text-sm font-bold text-green-900 mb-2">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-3 md:p-4 mb-4 md:mb-6">
+            <h3 className="text-xs md:text-sm font-bold text-green-900 mb-2">
               🔒 {t('newLead.sidebar.title')}
             </h3>
             <ul className="text-xs text-green-800 space-y-1">
@@ -298,7 +320,7 @@ const NewLeadPage = () => {
 
           {/* Matching Vehicles */}
           <div>
-            <h3 className="text-lg font-bold text-slate-900 mb-4">🏍 {t('newLead.sidebar.matchingVehicles')}</h3>
+            <h3 className="text-base md:text-lg font-bold text-slate-900 mb-3 md:mb-4">🏍 {t('newLead.sidebar.matchingVehicles')}</h3>
             <div className="space-y-3">
               {matchingVehicles.map((vehicle) => (
                 <div

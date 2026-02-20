@@ -1,6 +1,6 @@
 import {NextRequest, NextResponse} from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function middleware(_request: NextRequest) {
   // Just pass through - locale is handled via cookies
   return NextResponse.next();
 }

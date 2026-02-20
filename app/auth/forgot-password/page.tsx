@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -16,9 +17,9 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col md:flex-row">
       {/* Left Side - Branding */}
-      <div className="w-[45%] bg-[#0f1f2e] text-white p-16 flex flex-col justify-between">
+      <div className="hidden md:flex md:w-[45%] bg-[#0f1f2e] text-white p-8 lg:p-16 flex-col justify-between">
         <div>
           <h1 className="text-[#FF6B2C] text-4xl font-bold mb-4">MOTOOS</h1>
           <p className="text-slate-300 text-lg mb-12">Dealership Intelligence Platform</p>
@@ -65,12 +66,22 @@ export default function ForgotPasswordPage() {
       </div>
 
       {/* Right Side - Reset Form */}
-      <div className="flex-1 bg-[#f5f7fa] flex items-center justify-center p-12">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="text-5xl mb-4">🔑</div>
-            <h2 className="text-3xl font-bold text-slate-900 mb-2">Forgot Password?</h2>
-            <p className="text-slate-600">
+      <div className="flex-1 bg-[#f5f7fa] flex items-center justify-center p-6 md:p-12 relative">
+        {/* Language Switcher - Top Right */}
+        <div className="absolute top-4 right-4 md:top-6 md:right-6">
+          <LanguageSwitcher variant="compact" />
+        </div>
+
+        {/* Mobile Logo */}
+        <div className="md:hidden absolute top-4 left-4">
+          <h1 className="text-[#FF6B2C] text-xl font-bold">MOTOOS</h1>
+        </div>
+
+        <div className="w-full max-w-md mt-12 md:mt-0">
+          <div className="text-center mb-6 md:mb-8">
+            <div className="text-4xl md:text-5xl mb-4">🔑</div>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">Forgot Password?</h2>
+            <p className="text-sm md:text-base text-slate-600">
               No worries! Enter your email address and we'll send you a reset link.
             </p>
           </div>

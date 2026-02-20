@@ -3,8 +3,8 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useTranslations, useLocale } from 'next-intl';
-import { locales } from '@/i18n';
+import { useTranslations } from 'next-intl';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const menuItems = [
   { icon: '📊', labelKey: 'dashboard', href: '/dashboard' },
@@ -20,21 +20,12 @@ const menuItems = [
   { icon: '📜', labelKey: 'auditLog', href: '/audit-log' },
 ];
 
-const languageOptions = [
-  { code: 'en', label: 'English', flag: '🇬🇧' },
-  { code: 'sv', label: 'Svenska', flag: '🇸🇪' },
-  { code: 'no', label: 'Norsk', flag: '🇳🇴' },
-  { code: 'da', label: 'Dansk', flag: '🇩🇰' },
-  { code: 'ar', label: 'العربية', flag: '🇸🇦' },
-];
-
 const Sidebar = () => {
   const pathname = usePathname();
   const router = useRouter();
   const t = useTranslations();
-  const locale = useLocale();
   const [user, setUser] = useState<any>(null);
-  const [showLanguageMenu, setShowLanguageMenu] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Get user from localStorage
@@ -49,18 +40,30 @@ const Sidebar = () => {
     router.push('/auth/login');
   };
 
-  const handleLanguageChange = (newLocale: string) => {
-    // Set locale cookie
-    document.cookie = `locale=${newLocale}; path=/; max-age=31536000`; // 1 year
-    setShowLanguageMenu(false);
-    // Reload to apply new locale
-    router.refresh();
-  };
-
-  const currentLanguage = languageOptions.find(lang => lang.code === locale) || languageOptions[0];
-
   return (
-    <div className="w-64 h-screen bg-[#0f1729] text-slate-300 fixed left-0 top-0 flex flex-col">
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 bg-[#0f1729] text-white p-3 rounded-lg shadow-lg"
+      >
+        {isMobileMenuOpen ? '✕' : '☰'}
+      </button>
+
+      {/* Overlay for mobile */}
+      {isMobileMenuOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div className={`
+        w-64 h-screen bg-[#0f1729] text-slate-300 fixed left-0 top-0 flex flex-col z-40
+        transition-transform duration-300 ease-in-out
+        ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+      `}>
       {/* Logo */}
       <div className="px-6 py-6">
         <h1 className="text-[#FF6B2C] text-2xl font-bold">
@@ -92,34 +95,8 @@ const Sidebar = () => {
       </nav>
 
       {/* Language Selector */}
-      <div className="px-3 py-3 border-t border-slate-700 relative">
-        <button
-          onClick={() => setShowLanguageMenu(!showLanguageMenu)}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-slate-400 hover:bg-[#1a2332] hover:text-slate-200 transition-colors"
-        >
-          <span className="text-base">{currentLanguage.flag}</span>
-          <span className="text-sm font-medium flex-1 text-left">{currentLanguage.label}</span>
-          <span className="text-xs">▼</span>
-        </button>
-
-        {showLanguageMenu && (
-          <div className="absolute bottom-full left-3 right-3 mb-2 bg-[#1e2a3f] rounded-lg shadow-xl border border-slate-700 overflow-hidden">
-            {languageOptions.map((lang) => (
-              <button
-                key={lang.code}
-                onClick={() => handleLanguageChange(lang.code)}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
-                  lang.code === locale
-                    ? 'bg-[#FF6B2C] text-white'
-                    : 'text-slate-300 hover:bg-[#2a3a4f]'
-                }`}
-              >
-                <span>{lang.flag}</span>
-                <span>{lang.label}</span>
-              </button>
-            ))}
-          </div>
-        )}
+      <div className="px-3 py-3 border-t border-slate-700">
+        <LanguageSwitcher variant="default" />
       </div>
 
       {/* User Info at bottom */}
@@ -144,7 +121,8 @@ const Sidebar = () => {
         </button>
       </div>
     </div>
+    </>
   );
 }
 
-export default Sidebar 
+export default Sidebar;

@@ -37,17 +37,17 @@ export default function DashboardPage() {
       <Sidebar />
 
       {/* Main Content */}
-      <div className="ml-[230px] flex-1 p-8">
+      <div className="lg:ml-64 flex-1 p-4 md:p-6 lg:p-8">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
+        <div className="mb-6 md:mb-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
             {t('dashboard.welcome', { name: user.givenName || user.name || t('common.user') })} 👋
           </h1>
-          <p className="text-slate-600">{t('dashboard.subtitle')}</p>
+          <p className="text-sm md:text-base text-slate-600">{t('dashboard.subtitle')}</p>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
           <div className="bg-white rounded-lg border border-slate-200 p-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-2xl">💰</span>
@@ -94,9 +94,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-lg border border-slate-200 p-6 mb-8">
-          <h2 className="text-lg font-bold text-slate-900 mb-4">{t('dashboard.quickActions.title')}</h2>
-          <div className="grid grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg border border-slate-200 p-4 md:p-6 mb-6 md:mb-8">
+          <h2 className="text-base md:text-lg font-bold text-slate-900 mb-4">{t('dashboard.quickActions.title')}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
             <Link
               href="/sales/leads/new"
               className="flex items-center gap-3 p-4 rounded-lg border border-slate-200 hover:border-[#FF6B2C] hover:bg-orange-50 transition-colors"
@@ -133,9 +133,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent Activity */}
-        <div className="grid grid-cols-2 gap-6">
-          <div className="bg-white rounded-lg border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-4">{t('dashboard.recentLeads.title')}</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+          <div className="bg-white rounded-lg border border-slate-200 p-4 md:p-6">
+            <h2 className="text-base md:text-lg font-bold text-slate-900 mb-4">{t('dashboard.recentLeads.title')}</h2>
             <div className="space-y-3">
               {[
                 { name: 'Lars Andersson', interest: 'Ninja ZX-6R', hours: 2, status: 'hot' },
@@ -164,8 +164,8 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-lg border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-4">{t('dashboard.topSelling.title')}</h2>
+          <div className="bg-white rounded-lg border border-slate-200 p-4 md:p-6">
+            <h2 className="text-base md:text-lg font-bold text-slate-900 mb-4">{t('dashboard.topSelling.title')}</h2>
             <div className="space-y-3">
               {[
                 { name: 'Kawasaki Ninja ZX-6R', sales: 12, revenue: '1.8M kr' },

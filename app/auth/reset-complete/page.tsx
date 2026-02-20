@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export default function ResetCompletePage() {
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen flex-col md:flex-row">
       {/* Left Side - Branding */}
-      <div className="w-[45%] bg-[#0f1f2e] text-white p-16 flex flex-col justify-between">
+      <div className="hidden md:flex md:w-[45%] bg-[#0f1f2e] text-white p-8 lg:p-16 flex-col justify-between">
         <div>
           <h1 className="text-[#FF6B2C] text-4xl font-bold mb-4">MOTOOS</h1>
           <p className="text-slate-300 text-lg mb-12">Dealership Intelligence Platform</p>
@@ -53,10 +54,20 @@ export default function ResetCompletePage() {
       </div>
 
       {/* Right Side - Success Message */}
-      <div className="flex-1 bg-[#f5f7fa] flex items-center justify-center p-12">
-        <div className="w-full max-w-md text-center">
-          <div className="text-7xl mb-6">🎉</div>
-          <h2 className="text-3xl font-bold text-slate-900 mb-3">Password Reset Complete!</h2>
+      <div className="flex-1 bg-[#f5f7fa] flex items-center justify-center p-6 md:p-12 relative">
+        {/* Language Switcher - Top Right */}
+        <div className="absolute top-4 right-4 md:top-6 md:right-6">
+          <LanguageSwitcher variant="compact" />
+        </div>
+
+        {/* Mobile Logo */}
+        <div className="md:hidden absolute top-4 left-4">
+          <h1 className="text-[#FF6B2C] text-xl font-bold">MOTOOS</h1>
+        </div>
+
+        <div className="w-full max-w-md text-center mt-12 md:mt-0">
+          <div className="text-5xl md:text-7xl mb-4 md:mb-6">🎉</div>
+          <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">Password Reset Complete!</h2>
           <p className="text-slate-600 mb-8">
             Your password has been successfully reset. You can now sign in with your new password.
           </p>
