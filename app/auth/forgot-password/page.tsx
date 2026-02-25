@@ -21,7 +21,7 @@ export default function ForgotPasswordPage() {
       {/* Left Side - Branding */}
       <div className="hidden md:flex md:w-[45%] bg-[#0f1f2e] text-white p-8 lg:p-16 flex-col justify-between">
         <div>
-          <h1 className="text-[#FF6B2C] text-4xl font-bold mb-4">MOTOOS</h1>
+          <h1 className="text-[#FF6B2C] text-4xl font-bold mb-4">BikeMeNow</h1>
           <p className="text-slate-300 text-lg mb-12">Dealership Intelligence Platform</p>
 
           <div className="space-y-8">
@@ -60,7 +60,7 @@ export default function ForgotPasswordPage() {
         </div>
 
         <div className="text-sm text-slate-500">
-          <p>© 2026 MotoOS — AVA MC. All rights reserved.</p>
+          <p>© 2026 BikeMeNow.com. All rights reserved.</p>
           <p>256-bit encrypted • GDPR compliant • Swedish hosting</p>
         </div>
       </div>
@@ -74,7 +74,7 @@ export default function ForgotPasswordPage() {
 
         {/* Mobile Logo */}
         <div className="md:hidden absolute top-4 left-4">
-          <h1 className="text-[#FF6B2C] text-xl font-bold">MOTOOS</h1>
+          <h1 className="text-[#FF6B2C] text-xl font-bold">BikeMeNow</h1>
         </div>
 
         <div className="w-full max-w-md mt-12 md:mt-0">
@@ -96,7 +96,7 @@ export default function ForgotPasswordPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                placeholder="monica@avamc.se"
+                placeholder="namn@aterforsaljare.se"
                 required
               />
             </div>

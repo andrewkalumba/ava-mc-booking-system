@@ -3,12 +3,15 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
+  const t = useTranslations('resetPassword');
 
   const [formData, setFormData] = useState({
     password: '',
@@ -21,12 +24,12 @@ export default function ResetPasswordPage() {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match!');
+      toast.error(t('alerts.passwordsDontMatch'));
       return;
     }
 
     if (formData.password.length < 8) {
-      alert('Password must be at least 8 characters long!');
+      toast.error(t('alerts.passwordTooShort'));
       return;
     }
 
@@ -40,47 +43,47 @@ export default function ResetPasswordPage() {
       {/* Left Side - Branding */}
       <div className="hidden md:flex md:w-[45%] bg-[#0f1f2e] text-white p-8 lg:p-16 flex-col justify-between">
         <div>
-          <h1 className="text-[#FF6B2C] text-4xl font-bold mb-4">MOTOOS</h1>
-          <p className="text-slate-300 text-lg mb-12">Dealership Intelligence Platform</p>
+          <h1 className="text-[#FF6B2C] text-4xl font-bold mb-4">BikeMeNow</h1>
+          <p className="text-slate-300 text-lg mb-12">{t('branding.tagline')}</p>
 
           <div className="space-y-8">
             <div className="flex items-start gap-4">
               <div className="text-3xl">🔐</div>
               <div>
-                <h3 className="text-xl font-bold mb-2">Strong Password</h3>
-                <p className="text-slate-400">Minimum 8 characters required</p>
+                <h3 className="text-xl font-bold mb-2">{t('branding.strongPassword')}</h3>
+                <p className="text-slate-400">{t('branding.strongPasswordDesc')}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-4">
               <div className="text-3xl">✅</div>
               <div>
-                <h3 className="text-xl font-bold mb-2">Confirmation Match</h3>
-                <p className="text-slate-400">Both passwords must match</p>
+                <h3 className="text-xl font-bold mb-2">{t('branding.confirmationMatch')}</h3>
+                <p className="text-slate-400">{t('branding.confirmationMatchDesc')}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-4">
               <div className="text-3xl">🛡️</div>
               <div>
-                <h3 className="text-xl font-bold mb-2">Secure Hash</h3>
-                <p className="text-slate-400">Passwords are encrypted and never stored as plain text</p>
+                <h3 className="text-xl font-bold mb-2">{t('branding.secureHash')}</h3>
+                <p className="text-slate-400">{t('branding.secureHashDesc')}</p>
               </div>
             </div>
 
             <div className="flex items-start gap-4">
               <div className="text-3xl">🔄</div>
               <div>
-                <h3 className="text-xl font-bold mb-2">Immediate Effect</h3>
-                <p className="text-slate-400">New password works right away</p>
+                <h3 className="text-xl font-bold mb-2">{t('branding.immediateEffect')}</h3>
+                <p className="text-slate-400">{t('branding.immediateEffectDesc')}</p>
               </div>
             </div>
           </div>
         </div>
 
         <div className="text-sm text-slate-500">
-          <p>© 2026 MotoOS — AVA MC. All rights reserved.</p>
-          <p>256-bit encrypted • GDPR compliant • Swedish hosting</p>
+          <p>{t('branding.copyright')}</p>
+          <p>{t('branding.security')}</p>
         </div>
       </div>
 
@@ -93,23 +96,21 @@ export default function ResetPasswordPage() {
 
         {/* Mobile Logo */}
         <div className="md:hidden absolute top-4 left-4">
-          <h1 className="text-[#FF6B2C] text-xl font-bold">MOTOOS</h1>
+          <h1 className="text-[#FF6B2C] text-xl font-bold">BikeMeNow</h1>
         </div>
 
         <div className="w-full max-w-md mt-12 md:mt-0">
           <div className="text-center mb-6 md:mb-8">
             <div className="text-4xl md:text-5xl mb-4">🔑</div>
-            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">Set New Password</h2>
-            <p className="text-slate-600">
-              Enter your new password below. Make it strong and memorable!
-            </p>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">{t('title')}</h2>
+            <p className="text-slate-600">{t('subtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* New Password */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                New Password
+                {t('newPassword')}
               </label>
               <div className="relative">
                 <input
@@ -129,13 +130,13 @@ export default function ResetPasswordPage() {
                   {showPassword ? '🙈' : '👁️'}
                 </button>
               </div>
-              <p className="text-xs text-slate-500 mt-1">Minimum 8 characters</p>
+              <p className="text-xs text-slate-500 mt-1">{t('minLength')}</p>
             </div>
 
             {/* Confirm Password */}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                Confirm New Password
+                {t('confirmNewPassword')}
               </label>
               <div className="relative">
                 <input
@@ -165,8 +166,8 @@ export default function ResetPasswordPage() {
                   : 'bg-red-50 text-red-700'
               }`}>
                 {formData.password === formData.confirmPassword
-                  ? '✅ Passwords match!'
-                  : '❌ Passwords do not match'}
+                  ? t('passwordsMatch')
+                  : t('passwordsDoNotMatch')}
               </div>
             )}
 
@@ -174,7 +175,7 @@ export default function ResetPasswordPage() {
               type="submit"
               className="w-full bg-[#FF6B2C] text-white py-3 rounded-lg font-semibold hover:bg-[#e55a1f] transition-colors"
             >
-              Reset Password
+              {t('resetButton')}
             </button>
           </form>
 
@@ -183,12 +184,12 @@ export default function ResetPasswordPage() {
               href="/auth/login"
               className="text-sm text-blue-600 hover:underline flex items-center justify-center gap-1"
             >
-              <span>←</span> Back to Sign In
+              <span>←</span> {t('backToSignIn')}
             </Link>
           </div>
 
           <p className="text-center text-sm text-slate-600 mt-8">
-            🔒 256-bit SSL encrypted • GDPR compliant
+            {t('security')}
           </p>
         </div>
       </div>

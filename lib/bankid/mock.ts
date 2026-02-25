@@ -8,12 +8,14 @@
 import type { BankIDAuthResponse, BankIDCollectResponse } from './client';
 
 // Mock test users
+// NOTE: personalNumber '193604139208' is the Roaring.io sandbox test record (returns real address data).
+// The others are synthetic and will not return Roaring address data.
 const MOCK_USERS = [
   {
-    personalNumber: '198906042384',
-    name: 'Anna Andersson',
-    givenName: 'Anna',
-    surname: 'Andersson',
+    personalNumber: '193604139208',
+    name: 'Carina Testperson',
+    givenName: 'Carina',
+    surname: 'Testperson',
   },
   {
     personalNumber: '199003152385',
@@ -150,5 +152,26 @@ export function mockCollect(orderRef: string): BankIDCollectResponse {
  */
 export function mockCancel(orderRef: string): void {
   mockOrders.delete(orderRef);
+}
+
+/**
+ * Mock Roaring population register data.
+ * Matches the shape returned by getRoaringClient().getPersonBySSN()
+ * and used in the collect route's roaringData object.
+ */
+export function mockRoaringData() {
+  return {
+    address: {
+      street: 'Storgatan 12',
+      postalCode: '113 46',
+      city: 'Stockholm',
+      country: 'SE',
+    },
+    gender: 'F' as const,
+    citizenship: 'SE',
+    status: 'active',
+    protectedIdentity: false,
+    deceased: false,
+  };
 }
 

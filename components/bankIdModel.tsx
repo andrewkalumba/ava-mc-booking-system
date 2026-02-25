@@ -119,24 +119,29 @@ export default function BankIDModal({
   const qrTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const collectTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const seconds = useRef(0);
+  // Tracks the current auth call — incremented on every startBankID call and on
+  // cleanup, so stale async completions (React StrictMode double-effect) bail out
+  // before they can create a leaked interval.
+  const authCallId = useRef(0);
 
-  // Cleanup timers
+  // Auto-start + cleanup (single effect so cleanup always matches the start)
   useEffect(() => {
+    if (autoStart) startBankID();
     return () => {
+      authCallId.current++;          // invalidate any in-flight startBankID
       if (qrTimer.current) clearInterval(qrTimer.current);
       if (collectTimer.current) clearInterval(collectTimer.current);
     };
-  }, []);
-
-  // Auto-start if requested
-  useEffect(() => {
-    if (autoStart) startBankID();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ─── Start BankID ────────────────────────────────────────
 
   const startBankID = useCallback(async () => {
+    // Claim this call's ID — any previous in-flight call is now stale
+    authCallId.current += 1;
+    const myCallId = authCallId.current;
+
     setStatus('scanning');
     setMessage('Open the BankID app and scan the QR code.');
     seconds.current = 0;
@@ -151,6 +156,9 @@ export default function BankIDModal({
         }),
       });
       const data = await res.json();
+
+      // If cleanup ran or a newer startBankID was called while we awaited, bail
+      if (myCallId !== authCallId.current) return;
 
       if (data.error) {
         setStatus('failed');
@@ -259,8 +267,8 @@ export default function BankIDModal({
     : 'Ask the customer to scan the QR code with the BankID app.';
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 flex items-center justify-center z-[9999]">
-      <div className="bg-white rounded-[20px] px-10 py-8 max-w-[420px] w-full text-center shadow-[0_20px_60px_rgba(0,0,0,0.15)]">
+    <div className="fixed inset-0 bg-[#0b1524]/75 backdrop-blur-sm flex items-center justify-center z-[9999] animate-fade-in">
+      <div className="glass rounded-[24px] px-10 py-8 max-w-[420px] w-full text-center animate-fade-up">
         {/* BankID Logo */}
         <div className="mb-5">
           <div className="w-16 h-16 rounded-2xl bg-[#235971] inline-flex items-center justify-center">

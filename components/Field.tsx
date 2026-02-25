@@ -1,4 +1,4 @@
-export default function Field({ label, value, source }: { label: string; value: string; source: string }) {
+const Field = ({ label, value, source }: { label: string; value: string; source: string }) => {
   const sourceColors: Record<string, string> = {
     BankID: '#2563eb',
     Personnummer: '#8b5cf6',
@@ -20,3 +20,5 @@ export default function Field({ label, value, source }: { label: string; value: 
     </div>
   );
 }
+
+export default Field;

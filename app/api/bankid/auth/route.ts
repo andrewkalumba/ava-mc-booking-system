@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       if (mode === 'sign' && userVisibleData) {
         result = await startSign(endUserIp, userVisibleData);
       } else {
-        result = await startAuth(endUserIp, userVisibleData || 'Identifiering för MotoOS');
+        result = await startAuth(endUserIp, userVisibleData || 'Identifiering via BikeMeNow');
       }
     }
 

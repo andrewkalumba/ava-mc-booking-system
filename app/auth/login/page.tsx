@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
@@ -18,24 +18,34 @@ export default function LoginPage() {
     rememberDevice: false,
   });
 
+  // Redirect if already logged in
+  useEffect(() => {
+    const user = localStorage.getItem('user');
+    if (user) {
+      router.replace('/dashboard');
+    }
+  }, [router]);
+
   const handleBankIDComplete = (result: BankIDResult) => {
     setShowBankID(false);
-    // Store user session
-    localStorage.setItem('user', JSON.stringify(result.user));
+    // Store user session with Roaring data so dashboard can display it
+    localStorage.setItem('user', JSON.stringify({
+      ...result.user,
+      roaring: (result as any).roaring ?? null,
+    }));
     // Redirect to dashboard
-    router.push('/dashboard');
+    router.replace('/dashboard');
   };
 
   const handleEmailLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement email/password authentication
-    console.log('Email login:', formData);
-    // Store mock user session for email login
-    localStorage.setItem('user', JSON.stringify({
-      name: formData.email.split('@')[0],
-      email: formData.email
-    }));
-    router.push('/dashboard');
+    // Look up registered account to restore dealershipName
+    const accounts = JSON.parse(localStorage.getItem('accounts') || '{}');
+    const registered = accounts[formData.email];
+    localStorage.setItem('user', JSON.stringify(
+      registered ?? { name: formData.email.split('@')[0], email: formData.email }
+    ));
+    router.replace('/dashboard');
   };
 
   return (
@@ -138,7 +148,7 @@ export default function LoginPage() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 className="w-full px-4 py-3 rounded-lg border border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                placeholder="monica@avamc.se"
+                placeholder="namn@aterforsaljare.se"
                 required
               />
             </div>
@@ -190,7 +200,7 @@ export default function LoginPage() {
           <p className="text-center text-sm text-slate-600 mt-8">
             {t('login.noAccount')}{' '}
             <Link href="/auth/signup" className="text-[#FF6B2C] font-semibold hover:underline">
-              {t('login.signUp')}
+              Start free trial →
             </Link>
           </p>
         </div>

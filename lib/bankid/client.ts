@@ -26,7 +26,7 @@ const BANKID_CONFIG = {
   baseUrl: process.env.BANKID_API_URL || (isProduction
     ? 'https://appapi2.bankid.com/rp/v6.0'
     : 'https://appapi2.test.bankid.com/rp/v6.0'),
-  pfxPath: process.env.BANKID_PFX_PATH || './certs/FPTestcert5_20240610.p12',
+  pfxPath: process.env.BANKID_PFX_PATH || path.join(process.cwd(), 'certs/FPTestcert5_20240610.p12'),
   passphrase: process.env.BANKID_PFX_PASSPHRASE || 'qwerty123',
 };
 
@@ -114,7 +114,6 @@ async function bankidFetch<T>(endpoint: string, body: Record<string, unknown>): 
 export async function startAuth(endUserIp: string, userVisibleData?: string): Promise<BankIDAuthResponse> {
   const body: Record<string, unknown> = {
     endUserIp,
-    returnRisk: true,
   };
 
   // Optional: show text in BankID app
@@ -139,7 +138,6 @@ export async function startSign(
     endUserIp,
     userVisibleData: Buffer.from(userVisibleData).toString('base64'),
     userVisibleDataFormat: 'simpleMarkdownV1',
-    returnRisk: true,
   };
 
   if (userNonVisibleData) {

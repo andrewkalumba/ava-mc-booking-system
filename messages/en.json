@@ -1,27 +1,42 @@
 {
   "common": {
-    "appName": "MOTOOS",
+    "appName": "BikeMeNow",
     "version": "v3.0",
     "signOut": "Sign Out",
     "admin": "Admin",
-    "user": "User"
+    "user": "User",
+    "comingSoon": "Coming Soon",
+    "verifiedIdentity": "Verified Identity",
+    "populationVerified": "Population Register Verified",
+    "address": "Address",
+    "dateOfBirth": "Date of Birth",
+    "gender": "Gender",
+    "protectedIdentity": "Protected Identity",
+    "protectedIdentityYes": "Yes — handle with care"
   },
   "navigation": {
     "dashboard": "Dashboard",
     "inventory": "Inventory",
     "purchaseOrders": "Purchase Orders",
     "salesPipeline": "Sales Pipeline",
+    "pipeline": "Pipeline",
     "customers": "Customers",
     "invoices": "Invoices",
     "documents": "Documents",
     "analytics": "Analytics",
     "settings": "Settings",
     "users": "Users",
-    "auditLog": "Audit Log"
+    "auditLog": "Audit Log",
+    "subscribedDealer": "Subscribed Dealer",
+    "groups": {
+      "core": "CORE",
+      "sales": "SALES",
+      "admin": "ADMIN"
+    }
   },
   "login": {
     "title": "Welcome Back",
-    "subtitle": "Sign in to your MotoOS account",
+    "subtitle": "Sign in to your BikeMeNow workspace",
     "signInWithBankID": "Sign in with BankID",
     "recommended": "Recommended — No password needed",
     "or": "or",
@@ -43,7 +58,7 @@
       "analyticsDesc": "Live dashboards and AI insights",
       "dealers": "Built for MC Dealers",
       "dealersDesc": "Swedish motorcycle dealership focused",
-      "copyright": "© 2026 MotoOS — AVA MC. All rights reserved.",
+      "copyright": "© 2026 BikeMeNow.com. All rights reserved.",
       "security": "256-bit encrypted • GDPR compliant • Swedish hosting"
     }
   },
@@ -62,9 +77,15 @@
       "phone": "Phone Lookup"
     },
     "successBanner": "Identified via BankID — {name} ({personalNumber})",
+    "genderOptions": {
+      "male": "Male",
+      "female": "Female"
+    },
     "fields": {
       "name": "Name",
       "address": "Address",
+      "dateOfBirth": "Date of Birth",
+      "gender": "Gender",
       "email": "Email",
       "phone": "Phone",
       "source": "Source",
@@ -107,9 +128,32 @@
     "loading": "Loading...",
     "welcome": "Welcome back, {name}!",
     "subtitle": "Here's what's happening with your dealership today.",
+    "happeningToday": "Here's what's happening at your dealership today.",
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "newLead": "＋ New Lead",
+    "vsLastMonth": "vs last month",
+    "revenueTrend": "Revenue Trend",
+    "revenueTrendSub": "Last 6 months · kr (thousands)",
+    "vsLastYear": "↑ 22% vs last year",
+    "salesFunnel": "Sales Funnel",
+    "salesFunnelSub": "Active leads by stage",
+    "openPipeline": "Open pipeline →",
+    "funnelStages": {
+      "new": "New",
+      "contacted": "Contacted",
+      "testRide": "Test Ride",
+      "negotiating": "Negotiating",
+      "closed": "Closed"
+    },
     "stats": {
       "activeLeads": "Active Leads",
+      "inStock": "In Stock",
       "inventory": "Inventory",
+      "revenueKr": "Revenue (kr)",
       "revenue": "Revenue",
       "customers": "Customers",
       "new": "new",
@@ -120,14 +164,17 @@
     "quickActions": {
       "title": "Quick Actions",
       "newLead": "New Lead",
-      "newLeadDesc": "Create customer lead",
+      "newLeadDesc": "Add a walk-in or call",
       "addInventory": "Add Inventory",
       "addInventoryDesc": "Register new vehicle",
+      "addVehicle": "Add Vehicle",
+      "addVehicleDesc": "Update your stock",
       "purchaseOrder": "Purchase Order",
-      "purchaseOrderDesc": "Create new PO"
+      "purchaseOrderDesc": "Order from supplier"
     },
     "recentLeads": {
       "title": "Recent Leads",
+      "viewAll": "View all →",
       "hot": "Hot",
       "warm": "Warm",
       "cold": "Cold",
@@ -135,13 +182,15 @@
       "daysAgo": "{days} day ago"
     },
     "topSelling": {
-      "title": "Top Selling Bikes",
+      "title": "Top Selling",
+      "sold": "sold",
+      "thisMonth": "This month",
       "sales": "{count} sales"
     }
   },
   "signup": {
     "title": "Create Your Account",
-    "subtitle": "Join MotoOS and streamline your dealership",
+    "subtitle": "Join BikeMeNow and streamline your dealership",
     "signUpWithBankID": "Sign up with BankID",
     "recommended": "Recommended — Instant verification",
     "or": "or",
@@ -171,13 +220,251 @@
       "dealersDesc": "Swedish motorcycle dealership focused",
       "secureCompliant": "Secure & Compliant",
       "secureCompliantDesc": "GDPR compliant with Swedish hosting",
-      "copyright": "© 2026 MotoOS — AVA MC. All rights reserved.",
+      "copyright": "© 2026 BikeMeNow.com. All rights reserved.",
       "security": "256-bit encrypted • GDPR compliant • Swedish hosting"
     },
     "alerts": {
       "passwordsDontMatch": "Passwords do not match!",
       "passwordTooShort": "Password must be at least 8 characters long!",
       "mustAgreeToTerms": "You must agree to the Terms of Service and Privacy Policy!"
+    }
+  },
+  "resetPassword": {
+    "title": "Set New Password",
+    "subtitle": "Enter your new password below. Make it strong and memorable!",
+    "newPassword": "New Password",
+    "confirmNewPassword": "Confirm New Password",
+    "minLength": "Minimum 8 characters",
+    "passwordsMatch": "✅ Passwords match!",
+    "passwordsDoNotMatch": "❌ Passwords do not match",
+    "resetButton": "Reset Password",
+    "backToSignIn": "Back to Sign In",
+    "security": "🔒 256-bit SSL encrypted • GDPR compliant",
+    "branding": {
+      "tagline": "Dealership Intelligence Platform",
+      "strongPassword": "Strong Password",
+      "strongPasswordDesc": "Minimum 8 characters required",
+      "confirmationMatch": "Confirmation Match",
+      "confirmationMatchDesc": "Both passwords must match",
+      "secureHash": "Secure Hash",
+      "secureHashDesc": "Passwords are encrypted and never stored as plain text",
+      "immediateEffect": "Immediate Effect",
+      "immediateEffectDesc": "New password works right away",
+      "copyright": "© 2026 BikeMeNow.com. All rights reserved.",
+      "security": "256-bit encrypted • GDPR compliant • Swedish hosting"
+    },
+    "alerts": {
+      "passwordsDontMatch": "Passwords do not match",
+      "passwordTooShort": "Password must be at least 8 characters long"
+    }
+  },
+  "customers": {
+    "title": "Customers",
+    "searchPlaceholder": "Search customers…",
+    "addWithBankID": "🔒 Identify with BankID",
+    "addManuallyTitle": "Add customer manually",
+    "export": "Export",
+    "tabs": {
+      "all": "All",
+      "active": "Active",
+      "vip": "VIP",
+      "bankid": "BankID ✓",
+      "inactive": "Inactive"
+    },
+    "table": {
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "source": "Source",
+      "vehicles": "Vehicles",
+      "lifetimeValue": "Lifetime Value",
+      "lastActivity": "Last Activity",
+      "tags": "Tags",
+      "noResults": "No customers found",
+      "showing": "Showing 1–{count} of 342 customers"
+    },
+    "sourceBadge": {
+      "manual": "Manual"
+    },
+    "stats": {
+      "totalCustomers": "Total customers",
+      "bankidVerified": "BankID verified",
+      "bankidShare": "BankID share",
+      "protected": "Protected",
+      "unverified": "Not verified"
+    },
+    "new": {
+      "breadcrumb": "New customer",
+      "title": "Add new customer",
+      "subtitle": "Choose how you want to identify the customer",
+      "cancel": "Cancel",
+      "bankIDOption": {
+        "title": "Identify with BankID",
+        "desc": "Automatic filling of name and address from the population register. Recommended.",
+        "verifiedTag": "Verified identity",
+        "autoFillTag": "Auto-filled address"
+      },
+      "manualOption": {
+        "title": "Fill in manually",
+        "desc": "Enter the customer's details manually. No BankID required.",
+        "unverifiedTag": "Not verified",
+        "allManualTag": "All fields manual"
+      },
+      "scanning": {
+        "title": "Identify customer",
+        "subtitle": "Ask the customer to scan the QR code with the BankID app",
+        "clickStart": "Click \"Start BankID\"\nto show QR code",
+        "qrAutoUpdate": "The QR code updates automatically",
+        "startBankID": "⏳ Start BankID app and scan QR code...",
+        "openOnDevice": "📱 Open BankID on this device",
+        "back": "← Back",
+        "useManual": "Fill in manually instead",
+        "howItWorks": "How it works",
+        "dataSources": "Data sources",
+        "step1Title": "BankID scans",
+        "step1Desc": "Verifies personal number + name",
+        "step2Title": "Roaring.io fetches",
+        "step2Desc": "Address, postal code, city from population register",
+        "step3Title": "You fill in",
+        "step3Desc": "Email + phone (never in register)",
+        "step4Title": "Existing customer?",
+        "step4Desc": "Loads full profile automatically",
+        "source1": "BankID — Name, personal number (verified)",
+        "source2": "Roaring.io — Address, postal code, city, gender, birth date",
+        "source3": "Manual — Email, phone (always ask customer)"
+      },
+      "manual": {
+        "title": "New customer — Manual registration",
+        "subtitle": "Fill in customer details. Not BankID verified.",
+        "useBankIDInstead": "🔒 Use BankID instead",
+        "personalInfo": "Personal information",
+        "contact": "Contact details",
+        "addressSection": "Address",
+        "streetAddress": "Street address",
+        "postalCode": "Postal code",
+        "city": "City",
+        "notesSection": "Other",
+        "notesLabel": "Notes",
+        "notesPlaceholder": "Any notes about the customer...",
+        "genderMale": "Male",
+        "genderFemale": "Female",
+        "genderOther": "Other",
+        "warningNotVerified": "Manually registered customers are not BankID verified. Identity is not confirmed. Consider verifying the customer with BankID at the next visit.",
+        "saveCustomer": "Save customer"
+      },
+      "bankIDFlow": {
+        "identifiedBannerSub": "Personal number verified • Address fetched from population register",
+        "autoFilledTitle": "New customer — Auto-filled",
+        "autoFilledSubtitle": "Basic details fetched automatically. Fill in email and phone.",
+        "verifiedSection": "🔒 VERIFIED VIA BANKID",
+        "roaringSection": "📋 POPULATION REGISTER (ROARING.IO / SPAR)",
+        "manualSection": "✏️ FILL IN MANUALLY (not available in register)",
+        "unavailable": "Not available",
+        "male": "Male",
+        "female": "Female",
+        "saveCustomer": "Save customer"
+      },
+      "returning": {
+        "identified": "Identified via BankID — Profile loaded automatically. Last here: {date}.",
+        "quickActions": "Quick actions",
+        "newQuote": "New quote",
+        "createLead": "Create lead",
+        "bookTestRide": "Book test ride",
+        "viewProfile": "View profile",
+        "vehicles": "Vehicles",
+        "lifetimeValue": "Lifetime value",
+        "purchases": "Purchases",
+        "outstanding": "Outstanding"
+      },
+      "protected": {
+        "bannerTitle": "Protected identity (Confidentiality mark)",
+        "bannerDesc": "Address CANNOT be fetched automatically. Ask the customer to fill in their details.",
+        "title": "New customer — Protected identity",
+        "addressBlocked": "🛡 ADDRESS BLOCKED — PROTECTED IDENTITY",
+        "addressBlockedDesc": "Roaring.io returned protectedRegistration: true. Address not available.",
+        "confirmCheckbox": "I confirm that the customer has provided these details themselves"
+      },
+      "summary": {
+        "title": "Auto-fill summary",
+        "bankidVerified": "BankID (verified)",
+        "bankidSub": "First name, last name, personal number",
+        "roaringData": "Roaring.io / SPAR",
+        "roaringSub": "Address, postal code, city, birth date, gender",
+        "manualInput": "Manual input",
+        "manualSub": "Email, phone (never in register)",
+        "fields": "{count} fields",
+        "autoFilled": "80% filled automatically (8 of 10 fields)",
+        "bankidVerification": "🔒 BankID verification",
+        "signatureLabel": "Signature:",
+        "signatureStored": "stored (base64 XML)",
+        "ocspLabel": "OCSP:",
+        "ocspStored": "stored (valid)",
+        "riskLabel": "Risk:",
+        "riskLow": "Low",
+        "ipLabel": "IP:",
+        "signatureNote": "Signature + OCSP stored for each verification (legal proof)"
+      },
+      "savedToast": "Customer saved!",
+      "savedToastDesc": "The customer has been added to the system."
+    },
+    "profile": {
+      "tabs": {
+        "overview": "Overview",
+        "vehicles": "Vehicles",
+        "invoices": "Invoices",
+        "documents": "Documents",
+        "timeline": "Timeline",
+        "gdpr": "GDPR"
+      },
+      "contactInfo": "👤 Contact details",
+      "bankidHistory": "🔒 BankID Verification history",
+      "stats": "📊 Overview",
+      "recentActivity": "📋 Recent activity",
+      "noBankIDHistory": "No BankID history",
+      "noActivity": "No activity yet",
+      "noVehicles": "No registered vehicles",
+      "noInvoices": "No invoices",
+      "underDevelopment": "This section is under development.",
+      "fields": {
+        "firstName": "First name",
+        "lastName": "Last name",
+        "personalNumber": "Personal number",
+        "address": "Address",
+        "birthDate": "Date of birth",
+        "email": "Email",
+        "phone": "Phone",
+        "gender": "Gender",
+        "citizenship": "Citizenship",
+        "protectedIdentity": "Protected identity",
+        "yes": "Yes",
+        "no": "No",
+        "protectedAddressNote": "🛡️ Protected — not available"
+      },
+      "vehicleTable": {
+        "vehicle": "Vehicle",
+        "year": "Year",
+        "plate": "Registration number",
+        "status": "Status"
+      },
+      "invoiceTable": {
+        "invoiceNo": "Invoice no.",
+        "description": "Description",
+        "date": "Date",
+        "amount": "Amount",
+        "status": "Status"
+      },
+      "dataSources": "Data sources:",
+      "dataSourceLabels": {
+        "bankid": "BankID (verified)",
+        "roaring": "Roaring.io / SPAR (population register)",
+        "manual": "Manual input"
+      },
+      "actions": {
+        "newQuote": "New quote",
+        "gdprExport": "GDPR Export"
+      },
+      "notFound": "Customer not found",
+      "backToCustomers": "← Back to customers"
     }
   }
 }

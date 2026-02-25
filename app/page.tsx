@@ -1,24 +1,32 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { useTranslations } from 'next-intl';
 
 export default function Home() {
   const router = useRouter();
-  const t = useTranslations();
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
-    // Redirect to login page on app start
-    router.push('/auth/login');
+    // Only redirect once to prevent loops
+    if (hasRedirected.current) return;
+    hasRedirected.current = true;
+
+    // Check if user is logged in
+    const user = localStorage.getItem('user');
+    if (user) {
+      router.replace('/dashboard');
+    } else {
+      router.replace('/auth/login');
+    }
   }, [router]);
 
+  // Show loading spinner while redirecting
   return (
     <div className="flex items-center justify-center min-h-screen bg-[#f5f7fa]">
-      <div className="text-center">
-        <div className="text-5xl mb-4">🏍</div>
-        <h1 className="text-[#FF6B2C] text-3xl font-bold mb-2">{t('common.appName')}</h1>
-        <p className="text-slate-600">{t('redirecting')}</p>
+      <div className="text-center animate-fade-in">
+        <div className="w-10 h-10 border-4 border-[#FF6B2C] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+        <p className="text-slate-500 text-sm">Loading…</p>
       </div>
     </div>
   );

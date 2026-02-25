@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from 'sonner';
+
 export default function Page() {
 
   async function login() {
@@ -11,7 +13,7 @@ export default function Page() {
       if (!res.ok) {
         const error = await res.json();
         console.error("Login failed:", error);
-        alert(`Login failed: ${error.error}`);
+        toast.error(`Login failed: ${error.error}`);
         return;
       }
 
@@ -23,7 +25,7 @@ export default function Page() {
       window.location.href = data.redirectUrl;
     } catch (error) {
       console.error("Login error:", error);
-      alert("An error occurred during login");
+      toast.error("An error occurred during login");
     }
   }
 

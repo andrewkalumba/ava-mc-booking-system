@@ -48,7 +48,7 @@ class RoaringAPIClient {
 
     try {
       // Request new token using OAuth 2.0 Client Credentials flow
-      const tokenUrl = `${this.baseUrl}/oauth/token`;
+      const tokenUrl = `${this.baseUrl}/token`;
 
       const credentials = Buffer.from(`${this.clientId}:${this.clientSecret}`).toString('base64');
 
@@ -100,18 +100,13 @@ class RoaringAPIClient {
       // Normalize personnummer format (remove dash if present)
       const normalizedSSN = personnummer.replace(/[-\s]/g, '');
 
-      const endpoint = `/v2/population-register/${country.toLowerCase()}/person`;
-      const url = `${this.baseUrl}${endpoint}`;
+      const url = `${this.baseUrl}/person/2.0/current/${normalizedSSN}`;
 
       const response = await fetch(url, {
-        method: 'POST',
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({
-          ssn: normalizedSSN,
-        }),
       });
 
       if (!response.ok) {
@@ -126,6 +121,18 @@ class RoaringAPIClient {
       }
 
       const data = await response.json();
+
+      // Roaring returns HTTP 200 even when no record is found.
+      // Detect this via the status object: code 0 = found, code 1 = not found.
+      if (!data.records || data.records.length === 0 || data.status?.code !== 0) {
+        return {
+          success: false,
+          error: {
+            code: `ROARING_${data.status?.code ?? 'NO_RECORDS'}`,
+            message: data.status?.text || 'No person record found for this SSN',
+          },
+        };
+      }
 
       return {
         success: true,
@@ -269,27 +276,46 @@ class RoaringAPIClient {
   }
 
   /**
-   * Transform raw API response to standardized PersonData format
+   * Transform raw API response to standardized PersonData format.
+   * Roaring v2.0 response shape: { records: [{ ... }], status: { ... } }
    */
   private transformPersonData(rawData: any): PersonData {
+    // v2.0 uses "records", v1.0 used "posts" — support both
+    const post = rawData.records?.[0] ?? rawData.posts?.[0] ?? rawData;
+
+    // Name: may be nested object or flat fields
+    const nameObj = post.name ?? post;
+    const firstName = nameObj.givenName || nameObj.firstName || post.firstName || '';
+    const lastName = nameObj.surName || nameObj.surname || nameObj.lastName || post.surName || post.lastName || '';
+
+    // Address: may be a direct object or wrapped in nationalRegistrationAddress
+    const addrWrapper =
+      post.address?.nationalRegistrationAddress?.[0] ??
+      post.address ??
+      null;
+
+    // Gender: may be on the record directly or in a details sub-array
+    const detail = post.details?.[0] ?? post;
+    const genderRaw = post.gender || detail.gender;
+
     return {
-      ssn: rawData.ssn || rawData.personnummer || '',
+      ssn: post.personalNumber || '',
       name: {
-        first: rawData.firstName || rawData.givenName || '',
-        last: rawData.lastName || rawData.surname || '',
-        full: rawData.fullName || `${rawData.firstName || ''} ${rawData.lastName || ''}`.trim(),
+        first: firstName,
+        last: lastName,
+        full: `${firstName} ${lastName}`.trim(),
       },
-      address: rawData.address ? {
-        street: rawData.address.street || rawData.address.careOf || '',
-        postalCode: rawData.address.postalCode || rawData.address.zipCode || '',
-        city: rawData.address.city || '',
-        country: rawData.address.country || 'SE',
+      address: addrWrapper ? {
+        street: addrWrapper.deliveryAddress2 || addrWrapper.street || addrWrapper.careOf || '',
+        postalCode: addrWrapper.postalNumber || addrWrapper.postalCode || '',
+        city: addrWrapper.city || '',
+        country: 'SE',
       } : undefined,
-      birthDate: rawData.birthDate || rawData.dateOfBirth || '',
-      gender: rawData.gender || rawData.sex || undefined,
-      status: rawData.status || '',
-      protectedIdentity: rawData.protectedIdentity || false,
-      deceased: rawData.deceased || false,
+      birthDate: (post.birthDate || detail.birthDate || '').split('T')[0],
+      gender: genderRaw === 'M' || genderRaw === 'F' ? genderRaw : undefined,
+      status: post.secrecyMarked ? 'protected' : 'active',
+      protectedIdentity: post.secrecyMarked || false,
+      deceased: post.deceased || false,
     };
   }
 

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
 import BankIDModal from '@/components/bankIdModel';
 import type { BankIDResult, Demo } from '@/types';
@@ -32,6 +33,8 @@ const NewLeadPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     address: '',
+    dateOfBirth: '',
+    gender: '',
     email: '',
     phone: '',
     source: 'Walk-in',
@@ -52,13 +55,15 @@ const NewLeadPage = () => {
       ...prev,
       name: result.user.name,
       address: fullAddress,
+      dateOfBirth: (result.user as any).dateOfBirth || '',
+      gender: result.roaring?.gender || '',
     }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Creating lead:', formData);
-    alert('Lead created successfully!');
+    toast.success('Lead created successfully!');
   };
 
   const matchingVehicles = [
@@ -200,6 +205,47 @@ const NewLeadPage = () => {
                       }`}
                     required
                   />
+                </div>
+
+                {/* Date of Birth + Gender */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      {t('newLead.fields.dateOfBirth')}
+                      {formData.dateOfBirth && (
+                        <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-0.5 rounded font-semibold">
+                          {t('newLead.badges.bankid')}
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.dateOfBirth}
+                      onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                      disabled={!!bankIDData}
+                      className={`w-full px-3 py-2.5 rounded-lg border text-sm ${bankIDData ? 'bg-slate-50 border-slate-200 text-slate-600' : 'bg-white border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none'}`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                      {t('newLead.fields.gender')}
+                      {formData.gender && (
+                        <span className="ml-2 text-xs bg-green-600 text-white px-2 py-0.5 rounded font-semibold">
+                          {t('newLead.badges.registration')}
+                        </span>
+                      )}
+                    </label>
+                    <select
+                      value={formData.gender}
+                      onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                      disabled={!!bankIDData?.roaring && !!formData.gender}
+                      className={`w-full px-3 py-2.5 rounded-lg border text-sm ${bankIDData?.roaring && formData.gender ? 'bg-green-50 border-green-200 text-slate-600' : 'bg-white border-slate-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none'}`}
+                    >
+                      <option value="">—</option>
+                      <option value="M">{t('newLead.genderOptions.male')}</option>
+                      <option value="F">{t('newLead.genderOptions.female')}</option>
+                    </select>
+                  </div>
                 </div>
 
                 {/* Email Field */}
