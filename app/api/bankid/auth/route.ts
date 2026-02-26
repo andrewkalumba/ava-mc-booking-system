@@ -5,7 +5,7 @@ import { headers } from 'next/headers';
 
 const MOCK_MODE = process.env.BANKID_MOCK_MODE === 'true';
 
-export async function POST(req: NextRequest) {
+export const POST = async(req: NextRequest) => {
   try {
     const body = await req.json().catch(() => ({}));
     const mode: 'auth' | 'sign' = body.mode || 'auth';

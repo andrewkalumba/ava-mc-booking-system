@@ -4,7 +4,7 @@ import { mockCancel } from '@/lib/bankid/mock';
 
 const MOCK_MODE = process.env.BANKID_MOCK_MODE === 'true';
 
-export async function POST(req: NextRequest) {
+export const POST = async(req: NextRequest) => {
   try {
     const { orderRef } = await req.json();
     if (!orderRef) {

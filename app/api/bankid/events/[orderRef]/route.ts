@@ -7,10 +7,10 @@ declare global {
   var clients: Record<string, Array<{ write: (msg: unknown) => void }>>;
 }
 
-export async function GET(
+export const GET = async (
   _req: NextRequest,
   { params }: { params: Promise<{ orderRef: string }> }
-) {
+) => {
   const { orderRef } = await params;
 
   const stream = new ReadableStream({
