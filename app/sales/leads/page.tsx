@@ -51,7 +51,7 @@ const STATUS_CFG: Record<Status, { label: string; dot: string; text: string; bg:
 function LeadCard({ lead }: { lead: Lead }) {
   const s = STATUS_CFG[lead.status];
   return (
-    <div className="kanban-card bg-white rounded-xl border border-slate-100 p-4 cursor-pointer">
+    <Link href={`/sales/leads/${lead.id}/agreement`} className="kanban-card bg-white rounded-xl border border-slate-100 p-4 block">
       {/* Header */}
       <div className="flex items-start justify-between gap-2 mb-3">
         <div className="flex items-center gap-2.5 min-w-0">
@@ -81,7 +81,7 @@ function LeadCard({ lead }: { lead: Lead }) {
         <span className="text-sm font-bold text-[#0b1524]">{lead.value}</span>
         <span className="text-[11px] text-slate-400">{lead.time}</span>
       </div>
-    </div>
+    </Link>
   );
 }
 
