@@ -44,5 +44,16 @@
     "primaryFinancing": "",
     "credentials": {},
     "updatedAt": "2026-03-06T01:30:24.924Z"
+  },
+  "ava-mc-ab": {
+    "dealerId": "ava-mc-ab",
+    "dealerName": "AVA MC AB",
+    "enabledProviders": [
+      "svea",
+      "swish"
+    ],
+    "primaryFinancing": "",
+    "credentials": {},
+    "updatedAt": "2026-03-09T12:19:24.875Z"
   }
 }
