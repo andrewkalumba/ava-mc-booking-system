@@ -75,6 +75,10 @@ export default function Sidebar() {
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
+  // Hide on auth and public pages
+  const AUTH_PATHS = ['/auth', '/privacy', '/terms'];
+  if (AUTH_PATHS.some(p => pathname?.startsWith(p))) return null;
+
   const isActive = (href: string) =>
     pathname === href || (href === '/sales/leads' && pathname?.startsWith('/sales'));
 
