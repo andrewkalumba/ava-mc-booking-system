@@ -335,7 +335,7 @@ export default function InventoryPage() {
     const pendingPOs = autoPOs.filter((p) => p.status === 'Under Review').length
 
     return (
-        <div className="p-6 h-full flex flex-col">
+        <div className="lg:ml-64 min-h-screen p-6 flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
                 <div>

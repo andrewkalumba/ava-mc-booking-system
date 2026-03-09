@@ -306,7 +306,7 @@ export default function PurchasePage() {
     const tabs: (POStatus | 'All')[] = ['All', ...ALL_STATUSES]
 
     return (
-        <div className="h-full flex flex-col bg-white">
+        <div className="lg:ml-64 min-h-screen flex flex-col bg-white">
             {/* Top bar */}
             <div className="flex items-center justify-between px-6 py-3 border-b border-gray-200 shrink-0">
                 <span className="text-sm text-gray-500 font-medium">Purchase Orders</span>
