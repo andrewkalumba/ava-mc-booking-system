@@ -217,7 +217,7 @@ export default function AnalyticsPage() {
                 <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                 <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false}
-                  tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
+                  tickFormatter={(v: number) => `${(v/1000).toFixed(0)}k`} />
                 <Tooltip content={<KrTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Area type="monotone" dataKey="paid"    name="Betalda"   stroke="#FF6B2C" fill="url(#gradPaid)"    strokeWidth={2} dot={false} />
