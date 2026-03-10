@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import LanguageSwitcher from './LanguageSwitcher';
 import NotificationBell from './NotificationBell';
+import WebhookListener from './WebhookListener';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -14,10 +15,12 @@ export default function Sidebar() {
   const [open, setOpen] = useState(false);
   const [dealershipLogo, setDealershipLogo] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [orgNr, setOrgNr] = useState('');
   const t = useTranslations();
 
   const NAV_GROUPS = [
     {
+      labelKey: 'Core',
       label: t('navigation.groups.core'),
       items: [
         { icon: '📊', label: t('navigation.dashboard'),      href: '/dashboard' },
@@ -26,6 +29,7 @@ export default function Sidebar() {
       ],
     },
     {
+      labelKey: 'Sales',
       label: t('navigation.groups.sales'),
       items: [
         { icon: '💰', label: t('navigation.pipeline'),    href: '/sales/leads' },
@@ -34,6 +38,7 @@ export default function Sidebar() {
       ],
     },
     {
+      labelKey: 'Admin',
       label: t('navigation.groups.admin'),
       items: [
         { icon: '📈', label: t('navigation.analytics'),  href: '/analytics' },
@@ -43,6 +48,21 @@ export default function Sidebar() {
       ],
     },
   ];
+
+  const ROLE_NAV: Record<string, string[]> = {
+    admin:   ['Core', 'Sales', 'Admin'],
+    sales:   ['Core', 'Sales'],
+    service: ['Core'],
+  };
+
+  const ROLE_LABELS: Record<string, string> = {
+    admin:   t('common.admin'),
+    sales:   t('common.sales'),
+    service: t('common.service'),
+  };
+
+  const userRole      = user?.role ?? 'admin';
+  const visibleGroups = NAV_GROUPS.filter(g => (ROLE_NAV[userRole] ?? ['Core', 'Sales', 'Admin']).includes(g.labelKey));
 
   const loadLogo = () => {
     try {
@@ -59,6 +79,12 @@ export default function Sidebar() {
     const u = JSON.parse(raw);
     setUser(u);
     setAvatarUrl(u.avatarDataUrl || null);
+    try {
+      const p = JSON.parse(localStorage.getItem('dealership_profile') || '{}');
+      setOrgNr(p.orgNr || u.orgNr || '');
+    } catch {
+      setOrgNr(u.orgNr || '');
+    }
   };
 
   useEffect(() => {
@@ -83,6 +109,9 @@ export default function Sidebar() {
 
   return (
     <>
+      {/* Supabase Realtime webhook listener — invisible, always mounted while logged in */}
+      <WebhookListener />
+
       {/* Mobile toggle */}
       <button
         onClick={() => setOpen(!open)}
@@ -146,7 +175,7 @@ export default function Sidebar() {
 
         {/* Nav */}
         <nav className="flex-1 px-3 overflow-y-auto space-y-5 pb-2">
-          {NAV_GROUPS.map((group) => (
+          {visibleGroups.map((group) => (
             <div key={group.label}>
               <p className="text-[10px] font-bold text-slate-600 tracking-widest px-3 mb-1.5">
                 {group.label}
@@ -199,7 +228,7 @@ export default function Sidebar() {
               {t('common.terms')}
             </Link>
             <span>·</span>
-            <span>556123-4567</span>
+            {orgNr && <span>{orgNr}</span>}
           </div>
         </div>
 
@@ -222,7 +251,7 @@ export default function Sidebar() {
               <div className="text-white font-semibold text-sm truncate">
                 {user ? (user.givenName || user.name || t('common.user')) : t('common.user')}
               </div>
-              <div className="text-[11px] text-slate-500">{t('common.admin')}</div>
+              <div className="text-[11px] text-slate-500">{ROLE_LABELS[userRole] ?? t('common.admin')}</div>
             </div>
 
             <NotificationBell />

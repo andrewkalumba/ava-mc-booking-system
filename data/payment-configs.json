@@ -44,5 +44,17 @@
     "primaryFinancing": "",
     "credentials": {},
     "updatedAt": "2026-03-06T01:30:24.924Z"
+  },
+  "swedish-motors-ab": {
+    "dealerId": "swedish-motors-ab",
+    "dealerName": "Swedish Motors AB",
+    "enabledProviders": [
+      "svea",
+      "klarna",
+      "swish"
+    ],
+    "primaryFinancing": "",
+    "credentials": {},
+    "updatedAt": "2026-03-10T03:00:56.517Z"
   }
 }
