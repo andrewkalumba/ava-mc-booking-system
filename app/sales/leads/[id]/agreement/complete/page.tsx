@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import Sidebar from '@/components/Sidebar';
 import { getDealerInfo } from '@/lib/dealer';
+import { convertLeadToCustomer } from '@/lib/leads';
+import { emit } from '@/lib/realtime';
+import { toast } from 'sonner';
 
 interface SelectedPayment {
   id:       string;
@@ -86,6 +89,25 @@ export default function AgreementCompletePage() {
 
     setReady(true);
   }, [router, id]);
+
+  // Close the lead + create customer once the page is ready (runs once)
+  useEffect(() => {
+    if (!ready) return;
+    const leadId = Number(id);
+    if (Number.isNaN(leadId)) return;
+
+    convertLeadToCustomer(leadId).then(({ customerId, created }) => {
+      // Always emit so the pipeline board refreshes to show the lead in 'Closed'
+      emit({ type: 'lead:updated', payload: { id: String(leadId), status: 'closed' } });
+
+      if (created && customerId) {
+        // New customer row was inserted — notify all tabs
+        emit({ type: 'customer:created', payload: { id: customerId, name: '' } });
+        toast.success('Lead converted to customer and saved in the customer database.');
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
 
   const handleDownloadPDF = () => {
     const original = document.title;

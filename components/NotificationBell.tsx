@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl';
 import {
   AppNotification,
   NOTIFS_EVENT,
+  getNotifsKey,
   getNotifications,
   markAllRead,
   markRead,
@@ -46,7 +47,7 @@ export default function NotificationBell() {
     window.addEventListener(NOTIFS_EVENT, load);
     // Also sync when another tab writes to localStorage
     const onStorage = (e: StorageEvent) => {
-      if (e.key === 'app_notifications') load();
+      if (e.key === getNotifsKey()) load();
     };
     window.addEventListener('storage', onStorage);
     return () => {

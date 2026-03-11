@@ -1,5 +1,8 @@
-// ─── Customer store — localStorage backing store ──────────────────────────────
+// ─── Customer store — Supabase backing store ──────────────────────────────────
 // Seeded from KUNDLISTA export (AVA MC AB, 2025-10-07) — 474 customers
+
+import { getSupabaseBrowser } from './supabase';
+import { getDealershipId } from './tenant';
 
 export type Tag    = 'VIP' | 'Active' | 'New' | 'Inactive';
 export type Source = 'BankID' | 'Manual';
@@ -22,8 +25,6 @@ export interface Customer {
   gender:            'Man' | 'Kvinna';
   birthDate:         string;
 }
-
-const CUSTOMERS_KEY = 'app_customers';
 
 // ── Seed data (474 real customers from KUNDLISTA) ────────────────────────────
 export const INITIAL_CUSTOMERS: Customer[] = [
@@ -503,48 +504,137 @@ export const INITIAL_CUSTOMERS: Customer[] = [
   { id: 30812, firstName: "Johan", lastName: "Svensson", personnummer: '', email: "johan.s@dynamicpartners.se", phone: "0704497075", source: 'Manual', vehicles: 0, lifetimeValue: 0, lastActivity: "Jan 1", tag: 'Inactive', bankidVerified: false, protectedIdentity: false, address: '', gender: 'Man', birthDate: '' },
 ];
 
-// ── Read ───────────────────────────────────────────────────────────────────────
+// ── Supabase client ────────────────────────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function db() { return getSupabaseBrowser() as any; }
 
-export function getCustomers(): Customer[] {
-  if (typeof window === 'undefined') return INITIAL_CUSTOMERS;
-  try {
-    const stored = localStorage.getItem(CUSTOMERS_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored) as Customer[];
-      // Merge seed data on first load if stored list is smaller
-      if (parsed.length < INITIAL_CUSTOMERS.length) {
-        const ids = new Set(parsed.map(c => c.id));
-        const merged = [...parsed, ...INITIAL_CUSTOMERS.filter(c => !ids.has(c.id))];
-        localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(merged));
-        return merged;
-      }
-      return parsed;
-    }
-    localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(INITIAL_CUSTOMERS));
-    return INITIAL_CUSTOMERS;
-  } catch {
-    return INITIAL_CUSTOMERS;
-  }
+// ── Column mapping ─────────────────────────────────────────────────────────────
+const MONTH_MAP: Record<string, number> = {
+  Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12,
+};
+
+function parseLastActivity(s: string): string {
+  if (!s || s === '—') return new Date().toISOString();
+  const [mon, day] = s.split(' ');
+  const m = MONTH_MAP[mon ?? ''];
+  const d = parseInt(day ?? '0');
+  if (m && d) return new Date(2025, m - 1, d).toISOString();
+  return new Date().toISOString();
 }
 
-export function getCustomerById(id: number): Customer | undefined {
-  return getCustomers().find(c => c.id === id);
+function formatLastActivity(ts: string | null): string {
+  if (!ts) return '—';
+  try {
+    return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } catch { return '—'; }
+}
+
+function mapDbToCustomer(row: Record<string, unknown>): Customer {
+  return {
+    id:                row.id as number,
+    firstName:         (row.first_name  as string) ?? '',
+    lastName:          (row.last_name   as string) ?? '',
+    personnummer:      (row.personnummer as string) ?? '',
+    email:             (row.email       as string) ?? '',
+    phone:             (row.phone       as string) ?? '',
+    source:            (row.source      as Source) ?? 'Manual',
+    vehicles:          0,
+    lifetimeValue:     parseFloat(String(row.lifetime_value ?? '0')),
+    lastActivity:      formatLastActivity(row.last_activity as string | null),
+    tag:               (row.tag         as Tag)    ?? 'New',
+    bankidVerified:    (row.bankid_verified    as boolean) ?? false,
+    protectedIdentity: (row.protected_identity as boolean) ?? false,
+    address:           (row.address     as string) ?? '',
+    gender:            (row.gender      as 'Man' | 'Kvinna') ?? 'Man',
+    birthDate:         (row.birth_date  as string) ?? '',
+  };
+}
+
+function mapCustomerToDb(c: Customer, includeId = true): Record<string, unknown> {
+  const row: Record<string, unknown> = {
+    first_name:         c.firstName,
+    last_name:          c.lastName,
+    personnummer:       c.personnummer  || null,
+    email:              c.email         || null,
+    phone:              c.phone         || null,
+    source:             c.source,
+    lifetime_value:     c.lifetimeValue,
+    last_activity:      parseLastActivity(c.lastActivity),
+    tag:                c.tag,
+    bankid_verified:    c.bankidVerified,
+    protected_identity: c.protectedIdentity,
+    address:            c.address       || null,
+    gender:             c.gender,
+    birth_date:         c.birthDate     || null,
+  };
+  if (includeId) row.id = c.id;
+  return row;
+}
+
+// ── One-time seed ──────────────────────────────────────────────────────────────
+let _seeded = false;
+async function seedCustomersIfEmpty(): Promise<void> {
+  if (_seeded) return;
+  const { count } = await db()
+    .from('customers')
+    .select('id', { count: 'exact', head: true });
+  if ((count ?? 0) > 0) { _seeded = true; return; }
+  const rows = INITIAL_CUSTOMERS.map(c => mapCustomerToDb(c, false));
+  for (let i = 0; i < rows.length; i += 100) {
+    await db().from('customers').insert(rows.slice(i, i + 100));
+  }
+  _seeded = true;
+}
+
+// ── Read ───────────────────────────────────────────────────────────────────────
+
+export async function getCustomers(): Promise<Customer[]> {
+  const dealershipId = getDealershipId();
+  if (!dealershipId) return [];
+  const { data, error } = await db()
+    .from('customers')
+    .select('*')
+    .eq('dealership_id', dealershipId)
+    .order('last_activity', { ascending: false });
+  if (error) { console.error('[customers] getCustomers:', error.message); return []; }
+  return (data ?? []).map((r: Record<string, unknown>) => mapDbToCustomer(r));
+}
+
+export async function getCustomerById(id: number): Promise<Customer | undefined> {
+  const dealershipId = getDealershipId();
+  if (!dealershipId) return undefined;
+  const { data, error } = await db()
+    .from('customers')
+    .select('*')
+    .eq('id', id)
+    .eq('dealership_id', dealershipId)
+    .single();
+  if (error || !data) return undefined;
+  return mapDbToCustomer(data as Record<string, unknown>);
 }
 
 // ── Write ──────────────────────────────────────────────────────────────────────
 
-export function saveCustomer(customer: Customer): void {
-  const list = getCustomers();
-  const idx = list.findIndex(c => c.id === customer.id);
-  if (idx >= 0) {
-    list[idx] = customer;
-  } else {
-    list.unshift(customer);
-  }
-  localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(list));
+export async function saveCustomer(customer: Customer): Promise<void> {
+  const dealershipId = getDealershipId();
+  if (!dealershipId) { console.error('[customers] saveCustomer: no dealership context'); return; }
+  const { error } = await db()
+    .from('customers')
+    .upsert({ ...mapCustomerToDb(customer, true), dealership_id: dealershipId });
+  if (error) console.error('[customers] saveCustomer:', error.message);
 }
 
-export function nextCustomerId(): number {
-  const list = getCustomers();
-  return Math.max(...list.map(c => c.id), 30813) + 1;
+export async function createCustomer(
+  data: Omit<Customer, 'id'>,
+): Promise<Customer> {
+  const dealershipId = getDealershipId();
+  if (!dealershipId) throw new Error('Not authenticated: no dealership context');
+  const row = { ...mapCustomerToDb({ ...data, id: 0 }, false), dealership_id: dealershipId };
+  const { data: created, error } = await db()
+    .from('customers')
+    .insert(row)
+    .select()
+    .single();
+  if (error || !created) throw new Error(error?.message ?? 'createCustomer failed');
+  return mapDbToCustomer(created as Record<string, unknown>);
 }

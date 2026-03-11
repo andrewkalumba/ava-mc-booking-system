@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
 import { PAYMENT_REGISTRY } from '@/lib/payments/registry';
 import type { PaymentProviderDef } from '@/lib/payments/types';
@@ -96,9 +97,14 @@ export default function PaymentSettingsPage() {
     const raw = localStorage.getItem('user');
     if (!raw) { router.push('/auth/login'); return; }
     const user = JSON.parse(raw);
-    const id   = (user.dealershipName ?? user.dealership ?? 'ava-mc')
+    if (user.role !== 'admin') {
+      toast.error('Only administrators can configure payment providers.');
+      router.replace('/settings');
+      return;
+    }
+    const id   = (user.dealershipName || user.dealership || 'ava-mc')
       .toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
-    const name = user.dealershipName ?? user.dealership ?? '';
+    const name = user.dealershipName || user.dealership || '';
     setDealerId(id);
     setDealerName(name);
     loadConfig(id, name);

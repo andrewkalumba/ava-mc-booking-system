@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import Sidebar from '@/components/Sidebar';
 import { getCustomers, type Customer, type Tag } from '@/lib/customers';
+import { useAutoRefresh } from '@/lib/realtime';
 
 type Tab = 'all' | 'active' | 'vip' | 'bankid' | 'inactive';
 
@@ -39,10 +40,11 @@ export default function CustomersPage() {
   useEffect(() => {
     const user = localStorage.getItem('user');
     if (!user) { router.push('/auth/login'); return; }
-    setCustomers(getCustomers());
-    setReady(true);
+    getCustomers().then(data => { setCustomers(data); setReady(true); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useAutoRefresh(() => { getCustomers().then(setCustomers); });
 
   const counts = useMemo(() => ({
     all:      customers.length,

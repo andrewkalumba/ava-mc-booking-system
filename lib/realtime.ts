@@ -122,3 +122,73 @@ export function useAutoRefresh(loader: () => void): void {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
+
+// ── Supabase Realtime layer ─────────────────────────────────────────────────────
+// Opens ONE channel per dealership that watches all data tables and bridges
+// Postgres change events → BroadcastChannel event bus so every useAutoRefresh
+// hook across every page/context reacts automatically.
+
+import { getSupabaseBrowser } from '@/lib/supabase';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _realtimeChannel: any = null;
+
+/**
+ * Start Supabase Realtime subscriptions for all dealer data tables.
+ * Singleton — safe to call multiple times; only one channel is opened.
+ * Returns a cleanup/stop function.
+ */
+export function startSupabaseSync(dealershipId: string): () => void {
+  if (_realtimeChannel) return () => {};  // already running
+  const sb = getSupabaseBrowser();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const ch = (sb as any)
+    .channel(`dealer-sync-${dealershipId}`)
+    // ── customers ────────────────────────────────────────────────────────
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'customers', filter: `dealership_id=eq.${dealershipId}` },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (p: any) => emit({ type: 'customer:created', payload: { id: p.new.id, name: `${p.new.first_name} ${p.new.last_name}` } }))
+    .on('postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'customers', filter: `dealership_id=eq.${dealershipId}` },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (p: any) => emit({ type: 'customer:updated', payload: { id: p.new.id } }))
+    // ── leads ────────────────────────────────────────────────────────────
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'leads', filter: `dealership_id=eq.${dealershipId}` },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (p: any) => emit({ type: 'lead:created', payload: { id: String(p.new.id), name: p.new.name ?? '' } }))
+    .on('postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'leads', filter: `dealership_id=eq.${dealershipId}` },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (p: any) => emit({ type: 'lead:updated', payload: { id: String(p.new.id), status: p.new.lead_status ?? '' } }))
+    // ── invoices ─────────────────────────────────────────────────────────
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'invoices', filter: `dealership_id=eq.${dealershipId}` },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (p: any) => emit({ type: 'invoice:created', payload: { id: String(p.new.id), amount: Number(p.new.total_amount) } }))
+    .on('postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'invoices', filter: `dealership_id=eq.${dealershipId}` },
+      () => emit({ type: 'invoice:paid', payload: { id: '', amount: 0 } }))
+    // ── inventory ────────────────────────────────────────────────────────
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'motorcycles', filter: `dealership_id=eq.${dealershipId}` },
+      () => emit({ type: 'data:refresh' }))
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'spare_parts', filter: `dealership_id=eq.${dealershipId}` },
+      () => emit({ type: 'data:refresh' }))
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'accessories', filter: `dealership_id=eq.${dealershipId}` },
+      () => emit({ type: 'data:refresh' }))
+    // ── staff users ──────────────────────────────────────────────────────
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'staff_users', filter: `dealership_id=eq.${dealershipId}` },
+      () => emit({ type: 'data:refresh' }))
+    .subscribe();
+
+  _realtimeChannel = ch;
+  return () => {
+    sb.removeChannel(ch);
+    _realtimeChannel = null;
+  };
+}

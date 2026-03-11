@@ -3,8 +3,49 @@ import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
 
+const securityHeaders = [
+  // Block pages from being framed by other sites (clickjacking protection)
+  { key: 'X-Frame-Options',           value: 'DENY' },
+  // Prevent MIME-type sniffing
+  { key: 'X-Content-Type-Options',    value: 'nosniff' },
+  // Only send origin in Referer header (no full URL)
+  { key: 'Referrer-Policy',           value: 'strict-origin-when-cross-origin' },
+  // Disable browser features that aren't needed
+  {
+    key: 'Permissions-Policy',
+    value: 'camera=(), microphone=(), geolocation=(), payment=()',
+  },
+  // Force HTTPS for 2 years in production (browser ignores on localhost)
+  {
+    key: 'Strict-Transport-Security',
+    value: 'max-age=63072000; includeSubDomains; preload',
+  },
+  // Content-Security-Policy — restrict resource origins
+  // 'unsafe-inline' is kept temporarily for Tailwind/next-intl; tighten when using nonces
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js HMR needs unsafe-eval in dev
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "font-src 'self'",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+      "frame-ancestors 'none'",
+    ].join('; '),
+  },
+];
+
 const nextConfig: NextConfig = {
-  /* config options here */
+  async headers() {
+    return [
+      {
+        // Apply security headers to all routes
+        source: '/(.*)',
+        headers: securityHeaders,
+      },
+    ];
+  },
 };
 
 export default withNextIntl(nextConfig);

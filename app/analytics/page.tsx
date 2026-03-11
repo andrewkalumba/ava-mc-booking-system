@@ -4,13 +4,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts';
-import { getInvoices } from '@/lib/invoices';
-import { getCustomers } from '@/lib/customers';
+import { getInvoices, type Invoice } from '@/lib/invoices';
+import { getCustomers, type Customer } from '@/lib/customers';
 import { useAutoRefresh } from '@/lib/realtime';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -67,22 +68,30 @@ export default function AnalyticsPage() {
   const router = useRouter();
   const t = useTranslations('pages');
 
-  const [invoices,  setInvoices]  = useState(() => getInvoices());
-  const [customers, setCustomers] = useState(() => getCustomers());
+  const [invoices,  setInvoices]  = useState<Invoice[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [ready,     setReady]     = useState(false);
 
   useEffect(() => {
-    const user = localStorage.getItem('user');
-    if (!user) { router.replace('/auth/login'); return; }
-    setInvoices(getInvoices());
-    setCustomers(getCustomers());
-    setReady(true);
+    const raw = localStorage.getItem('user');
+    if (!raw) { router.replace('/auth/login'); return; }
+    const u = JSON.parse(raw);
+    if (u.role !== 'admin') {
+      toast.error('Analytics is only available to administrators.');
+      router.replace('/dashboard');
+      return;
+    }
+    Promise.all([getInvoices(), getCustomers()]).then(([invData, custData]) => {
+      setInvoices(invData);
+      setCustomers(custData);
+      setReady(true);
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useAutoRefresh(() => {
-    setInvoices(getInvoices());
-    setCustomers(getCustomers());
+    getInvoices().then(setInvoices);
+    getCustomers().then(setCustomers);
   });
 
   // ── Revenue by month (last 12) ─────────────────────────────────────────────

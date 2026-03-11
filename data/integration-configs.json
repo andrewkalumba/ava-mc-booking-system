@@ -19,5 +19,18 @@
     "enabledIntegrations": [],
     "credentials": {},
     "updatedAt": "2026-03-07T00:48:45.697Z"
+  },
+  "stockholm-motors-ab": {
+    "dealerId": "stockholm-motors-ab",
+    "dealerName": "Stockholm Motors AB",
+    "enabledIntegrations": [
+      "fortnox",
+      "transportstyrelsen",
+      "blocket",
+      "lansforsakringar",
+      "trygg_hansa"
+    ],
+    "credentials": {},
+    "updatedAt": "2026-03-10T14:59:57.294Z"
   }
 }

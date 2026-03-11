@@ -7,6 +7,9 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import PhoneInput from '@/components/PhoneInput';
 import PasswordInput from '@/components/PasswordInput';
+import { supabase } from '@/lib/supabase';
+import BankIDModal from '@/components/bankIdModel';
+import type { BankIDResult } from '@/types';
 
 type Plan = 'starter' | 'professional' | 'enterprise';
 type Step = 0 | 1 | 2 | 3 | 4;
@@ -54,6 +57,8 @@ export default function SignupPage() {
   const [selectedPlan, setSelectedPlan] = useState<Plan>('professional');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [skipped, setSkipped] = useState<Set<string>>(new Set());
+  const [adminVerified, setAdminVerified] = useState<BankIDResult | null>(null);
+  const [showAdminBankID, setShowAdminBankID] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -84,6 +89,39 @@ export default function SignupPage() {
     dealershipName: '', orgNumber: '', streetAddress: '',
     postalCode: '', city: '', phone: '', website: '',
   });
+
+  // ── Postal code → city auto-lookup ──────────────────────────────────────────
+  const [postalLookup, setPostalLookup] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle');
+
+  useEffect(() => {
+    const digits = business.postalCode.replace(/\D/g, '');
+    if (digits.length !== 5) { setPostalLookup('idle'); return; }
+
+    setPostalLookup('loading');
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://api.zippopotam.us/se/${digits}`);
+        if (!res.ok) { setPostalLookup('notfound'); return; }
+        const data = await res.json();
+        const place = data.places?.[0];
+        if (place) {
+          setBusiness(b => ({
+            ...b,
+            city: b.city || place['place name'], // only fill if user hasn't typed one
+          }));
+          setPostalLookup('found');
+          setErrors(e => ({ ...e, city: '', postalCode: '' }));
+        } else {
+          setPostalLookup('notfound');
+        }
+      } catch {
+        setPostalLookup('notfound');
+      }
+    }, 400); // 400 ms debounce
+
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business.postalCode]);
   const [admin, setAdmin] = useState({
     fullName: '', email: '', mobile: '',
     password: '', confirmPassword: '', agreeToTerms: false,
@@ -109,14 +147,18 @@ export default function SignupPage() {
 
   function validateStep2(): boolean {
     const e: Record<string, string> = {};
-    if (!admin.fullName.trim())     e.fullName = 'Required';
+    // Name is auto-filled from BankID — only required when filling manually
+    if (!adminVerified && !admin.fullName.trim()) e.fullName = 'Required';
     if (!admin.email.trim())        e.email    = 'Required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(admin.email)) e.email = 'Invalid email address';
     if (!admin.mobile.trim())       e.mobile   = 'Required';
-    if (!admin.password)            e.password = 'Required';
-    else if (admin.password.length < 8) e.password = 'Minimum 8 characters';
-    if (!admin.confirmPassword)     e.confirmPassword = 'Required';
-    else if (admin.password !== admin.confirmPassword) e.confirmPassword = 'Passwords do not match';
+    // Password fields are only needed when NOT using BankID
+    if (!adminVerified) {
+      if (!admin.password)            e.password = 'Required';
+      else if (admin.password.length < 8) e.password = 'Minimum 8 characters';
+      if (!admin.confirmPassword)     e.confirmPassword = 'Required';
+      else if (admin.password !== admin.confirmPassword) e.confirmPassword = 'Passwords do not match';
+    }
     if (!admin.agreeToTerms)        e.agreeToTerms = 'You must agree to the terms to continue';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -278,6 +320,7 @@ export default function SignupPage() {
   const plan = PLANS[selectedPlan];
 
   return (
+    <>
     <div className="min-h-screen bg-[#f8fafc] flex flex-col">
       {/* Slim nav */}
       <nav className="flex items-center justify-between px-8 py-4 border-b border-slate-100 bg-white">
@@ -348,22 +391,47 @@ export default function SignupPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Postal Code *</label>
-                    <input
-                      type="text"
-                      value={business.postalCode}
-                      onChange={e => { setBusiness({ ...business, postalCode: e.target.value }); setErrors(p => ({ ...p, postalCode: '' })); }}
-                      placeholder="XXX XX"
-                      className={fc('postalCode')}
-                    />
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={business.postalCode}
+                        onChange={e => {
+                          // Auto-format as "XXX XX"
+                          const raw = e.target.value.replace(/\D/g, '').slice(0, 5);
+                          const fmt = raw.length > 3 ? `${raw.slice(0, 3)} ${raw.slice(3)}` : raw;
+                          setBusiness({ ...business, postalCode: fmt, city: '' });
+                          setPostalLookup('idle');
+                          setErrors(p => ({ ...p, postalCode: '', city: '' }));
+                        }}
+                        placeholder="XXX XX"
+                        maxLength={6}
+                        className={fc('postalCode')}
+                      />
+                      {postalLookup === 'loading' && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="w-4 h-4 border-2 border-[#FF6B2C] border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
+                    </div>
                     {errors.postalCode && <p className="text-xs text-red-500 mt-1">{errors.postalCode}</p>}
+                    {postalLookup === 'notfound' && (
+                      <p className="text-xs text-amber-600 mt-1">Postal code not found — please enter city manually.</p>
+                    )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">City *</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1.5">
+                      City *
+                      {postalLookup === 'found' && (
+                        <span className="text-[10px] font-normal text-green-600 bg-green-50 border border-green-200 rounded px-1.5 py-0.5">
+                          Auto-detected
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="text"
                       value={business.city}
                       onChange={e => { setBusiness({ ...business, city: e.target.value }); setErrors(p => ({ ...p, city: '' })); }}
-                      placeholder="e.g., Stockholm"
+                      placeholder={postalLookup === 'loading' ? 'Detecting…' : 'e.g., Stockholm'}
                       className={fc('city')}
                     />
                     {errors.city && <p className="text-xs text-red-500 mt-1">{errors.city}</p>}
@@ -414,9 +482,54 @@ export default function SignupPage() {
           <div className="w-full max-w-lg">
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-1">Create your admin account</h2>
-              <p className="text-slate-500 text-sm mb-7">You'll be the owner of this dealership</p>
+              <p className="text-slate-500 text-sm mb-6">You'll be the owner of this dealership</p>
+
+              {/* ── BankID identity verification ── */}
+              {!adminVerified ? (
+                <div className="mb-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdminBankID(true)}
+                    className="w-full bg-[#235971] hover:bg-[#1a4557] text-white py-3.5 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2"
+                  >
+                    <span className="text-xl">🆔</span> Verify identity with BankID
+                  </button>
+                  <p className="text-center text-xs text-slate-500 mt-1.5">
+                    Recommended · Automatically fills your name · No password needed
+                  </p>
+                  <div className="relative my-5">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-slate-200" />
+                    </div>
+                    <div className="relative flex justify-center text-xs">
+                      <span className="px-3 bg-white text-slate-400">or fill in manually</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mb-5 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                    <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-green-800">Identity verified with BankID</p>
+                    <p className="text-xs text-green-600 truncate">{adminVerified.user.name} · {adminVerified.user.personalNumber}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setAdminVerified(null); setAdmin(a => ({ ...a, fullName: '' })); }}
+                    className="text-xs text-slate-400 hover:text-slate-600 shrink-0"
+                  >
+                    Change
+                  </button>
+                </div>
+              )}
 
               <div className="space-y-4">
+                {/* Full name — hidden when BankID auto-fills it */}
+                {!adminVerified && (
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('fullName')} *</label>
                   <input
@@ -428,6 +541,7 @@ export default function SignupPage() {
                   />
                   {errors.fullName && <p className="text-xs text-red-500 mt-1">{errors.fullName}</p>}
                 </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('emailAddress')} *</label>
                   <input
@@ -449,6 +563,7 @@ export default function SignupPage() {
                   />
                   {errors.mobile && <p className="text-xs text-red-500 mt-1">{errors.mobile}</p>}
                 </div>
+                {!adminVerified && (<>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('password')} *</label>
                   <PasswordInput
@@ -479,6 +594,7 @@ export default function SignupPage() {
                     )
                   }
                 </div>
+                </>)}
                 <div>
                   <div className="flex items-start gap-2.5 pt-1">
                     <input
@@ -619,50 +735,105 @@ export default function SignupPage() {
                 ← Back
               </button>
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!validateStep3()) return;
+
+                  // 1. Generate a stable UUID for this dealership so we always
+                  //    know the ID even if the Supabase insert is slow.
+                  const dealershipId = crypto.randomUUID();
+
+                  // 2. Create the dealership row in Supabase (non-blocking on error).
+                  const { error: dealerErr } = await supabase
+                    .from('dealerships')
+                    .insert({
+                      id:          dealershipId,
+                      name:        business.dealershipName,
+                      org_nr:      business.orgNumber || null,
+                      address:     business.streetAddress || null,
+                      postal_code: business.postalCode || null,
+                      city:        business.city || null,
+                      phone:       business.phone || null,
+                      email:       admin.email,
+                      website:     business.website || null,
+                      plan:        selectedPlan,
+                    });
+                  if (dealerErr) console.error('[signup] dealerships insert:', dealerErr.message);
+
+                  const resolvedName = adminVerified?.user.name ?? admin.fullName;
+
+                  // 3. Create the admin staff_users row in Supabase.
+                  const { error: staffErr } = await supabase
+                    .from('staff_users')
+                    .insert({
+                      dealership_id:   dealershipId,
+                      name:            resolvedName,
+                      email:           admin.email,
+                      role:            'admin',
+                      status:          'active',
+                      bankid_verified: !!adminVerified,
+                      personal_number: adminVerified?.user.personalNumber ?? '',
+                    });
+                  if (staffErr) console.error('[signup] staff_users insert:', staffErr.message);
+
+                  // 4. Persist to localStorage — dealershipId is the tenant key
+                  //    used by every Supabase query from this browser.
                   const profile = {
-                    name: admin.fullName,
-                    email: admin.email,
-                    dealershipName: business.dealershipName,
-                    orgNr: business.orgNumber,
-                    city: business.city,
-                    postalCode: business.postalCode,
-                    streetAddress: business.streetAddress,
-                    phone: business.phone,
-                    website: business.website,
-                    plan: selectedPlan,
-                    role: 'admin' as const,
+                    name:            resolvedName,
+                    givenName:       adminVerified?.user.givenName ?? admin.fullName.split(' ')[0],
+                    personalNumber:  adminVerified?.user.personalNumber ?? '',
+                    email:           admin.email,
+                    dealershipName:  business.dealershipName,
+                    dealershipId,                        // ← tenant isolation key
+                    orgNr:           business.orgNumber,
+                    city:            business.city,
+                    postalCode:      business.postalCode,
+                    streetAddress:   business.streetAddress,
+                    phone:           business.phone,
+                    website:         business.website,
+                    plan:            selectedPlan,
+                    role:            'admin' as const,
                   };
                   localStorage.setItem('user', JSON.stringify(profile));
-                  // Seed dealership_profile so all pages read the correct dealer data immediately
                   localStorage.setItem('dealership_profile', JSON.stringify({
-                    name: business.dealershipName,
-                    orgNr: business.orgNumber,
-                    city: business.city,
+                    name:       business.dealershipName,
+                    orgNr:      business.orgNumber,
+                    city:       business.city,
                     postalCode: business.postalCode,
-                    address: business.streetAddress,
-                    phone: business.phone,
-                    website: business.website,
-                    email: admin.email,
+                    address:    business.streetAddress,
+                    phone:      business.phone,
+                    website:    business.website,
+                    email:      admin.email,
                   }));
                   const accounts = JSON.parse(localStorage.getItem('accounts') || '{}');
                   accounts[admin.email] = profile;
                   localStorage.setItem('accounts', JSON.stringify(accounts));
-                  // Seed staff_users with the admin record if it doesn't exist yet
                   if (!localStorage.getItem('staff_users')) {
-                    const adminStaff = [{
-                      id: crypto.randomUUID(),
-                      name: admin.fullName,
-                      email: admin.email,
-                      role: 'admin' as const,
-                      status: 'active' as const,
-                      lastLogin: new Date().toISOString(),
-                      bankidVerified: false,
-                      personalNumber: '',
-                    }];
-                    localStorage.setItem('staff_users', JSON.stringify(adminStaff));
+                    localStorage.setItem('staff_users', JSON.stringify([{
+                      id:              crypto.randomUUID(),
+                      name:            resolvedName,
+                      email:           admin.email,
+                      role:            'admin' as const,
+                      status:          'active' as const,
+                      lastLogin:       new Date().toISOString(),
+                      bankidVerified:  !!adminVerified,
+                      personalNumber:  adminVerified?.user.personalNumber ?? '',
+                    }]));
                   }
+
+                  // 5. Create server-side httpOnly session cookie — this is what
+                  //    the middleware checks on every page load.
+                  await fetch('/api/auth/session', {
+                    method:  'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      dealershipId,
+                      dealershipName: business.dealershipName,
+                      name:           resolvedName,
+                      email:          admin.email,
+                      role:           'admin',
+                    }),
+                  });
+
                   setStep(4);
                 }}
                 className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700 transition-colors"
@@ -764,5 +935,20 @@ export default function SignupPage() {
         )}
       </div>
     </div>
+
+    {/* BankID modal for admin identity verification in Step 2 */}
+    {showAdminBankID && (
+      <BankIDModal
+        mode="auth"
+        onComplete={(result: BankIDResult) => {
+          setAdminVerified(result);
+          setAdmin(a => ({ ...a, fullName: result.user.name }));
+          setShowAdminBankID(false);
+        }}
+        onCancel={() => setShowAdminBankID(false)}
+        autoStart
+      />
+    )}
+    </>
   );
 }

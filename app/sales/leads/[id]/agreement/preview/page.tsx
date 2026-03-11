@@ -5,6 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import Sidebar from '@/components/Sidebar';
+import { getSupabaseBrowser } from '@/lib/supabase';
+import { getDealershipId } from '@/lib/tenant';
 
 interface AgreementData {
   agreementNumber: string;
@@ -63,6 +65,9 @@ export default function AgreementPreviewPage() {
   const t = useTranslations('agreement');
   const [ready, setReady] = useState(false);
   const [dealer, setDealer] = useState({ name: '', orgNr: '', city: '', email: '' });
+  const [buyerName, setBuyerName] = useState(MOCK_AGREEMENT.buyerName);
+  const [personnummer, setPersonnummer] = useState(MOCK_AGREEMENT.personnummer);
+  const [buyerAddress, setBuyerAddress] = useState(MOCK_AGREEMENT.buyerAddress);
 
   useEffect(() => {
     const raw = localStorage.getItem('user');
@@ -79,8 +84,31 @@ export default function AgreementPreviewPage() {
     } catch {
       setDealer({ name: user.dealershipName || 'My Dealership', orgNr: '—', city: '—', email: '—' });
     }
+
+    // Fetch real buyer name and personnummer from the lead
+    const leadId = Number(id);
+    if (!Number.isNaN(leadId)) {
+      (async () => {
+        const dealershipId = getDealershipId();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sb = getSupabaseBrowser() as any;
+        const { data: lead } = await sb
+          .from('leads')
+          .select('name, personnummer, address, city')
+          .eq('id', leadId)
+          .eq('dealership_id', dealershipId)
+          .maybeSingle();
+        if (lead) {
+          if (lead.name)         setBuyerName(lead.name as string);
+          if (lead.personnummer) setPersonnummer(lead.personnummer as string);
+          const addr = [lead.address, lead.city].filter(Boolean).join(', ');
+          if (addr) setBuyerAddress(addr);
+        }
+      })();
+    }
+
     setReady(true);
-  }, [router]);
+  }, [id, router]);
 
   if (!ready) return (
     <div className="flex items-center justify-center min-h-screen bg-[#f5f7fa]">
@@ -88,7 +116,7 @@ export default function AgreementPreviewPage() {
     </div>
   );
 
-  const agr = MOCK_AGREEMENT;
+  const agr = { ...MOCK_AGREEMENT, buyerName, personnummer, buyerAddress };
 
   // Konsumentkreditlagen 2010:1846 — computed credit totals
   const creditAmount = agr.totalPrice - agr.tradeInCredit;

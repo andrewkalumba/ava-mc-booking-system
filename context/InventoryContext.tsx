@@ -10,7 +10,9 @@ import React, {
 } from 'react'
 
 import { supabase }         from '@/lib/supabase'
+import { getDealershipId }  from '@/lib/tenant'
 import { generateAutoPOs }  from '@/utils/generateAutoPOs'
+import { emit, useAutoRefresh } from '@/lib/realtime'
 
 import type { Motorcycle, SparePart, Accessory, PurchaseOrder } from '@/utils/types'
 
@@ -95,21 +97,23 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
     const [accessories, setAccessories] = useState<Accessory[] >([])
     const [loading,     setLoading    ] = useState(true)
 
-    // Fetch all inventory from Supabase on mount
-    useEffect(() => {
-        async function loadInventory() {
-            const [mcs, sps, accs] = await Promise.all([
-                supabase.from('motorcycles').select('*').order('id'),
-                supabase.from('spare_parts').select('*').order('id'),
-                supabase.from('accessories').select('*').order('id'),
-            ])
-            if (mcs.data)  setMotorcycles(mcs.data.map(dbToMotorcycle))
-            if (sps.data)  setSpareParts(sps.data.map(dbToSparePart))
-            if (accs.data) setAccessories(accs.data.map(dbToAccessory))
-            setLoading(false)
-        }
-        loadInventory()
+    // Fetch all inventory from Supabase
+    const loadInventory = useCallback(async () => {
+        const dealershipId = getDealershipId()
+        if (!dealershipId) { setLoading(false); return }
+        const [mcs, sps, accs] = await Promise.all([
+            supabase.from('motorcycles').select('*').eq('dealership_id', dealershipId).order('id'),
+            supabase.from('spare_parts').select('*').eq('dealership_id', dealershipId).order('id'),
+            supabase.from('accessories').select('*').eq('dealership_id', dealershipId).order('id'),
+        ])
+        if (mcs.data)  setMotorcycles(mcs.data.map(dbToMotorcycle))
+        if (sps.data)  setSpareParts(sps.data.map(dbToSparePart))
+        if (accs.data) setAccessories(accs.data.map(dbToAccessory))
+        setLoading(false)
     }, [])
+
+    useEffect(() => { loadInventory() }, [loadInventory])
+    useAutoRefresh(loadInventory)
 
     /**
      * Optimistically update React state, then persist to Supabase.
@@ -124,7 +128,10 @@ export function InventoryProvider({ children }: { children: React.ReactNode }) {
         const table = id.startsWith('MC-')  ? 'motorcycles'
                     : id.startsWith('SP-')  ? 'spare_parts'
                     : 'accessories'
-        supabase.from(table).update({ stock: qty }).eq('id', id)
+        const dealershipId = getDealershipId()
+        if (!dealershipId) return
+        supabase.from(table).update({ stock: qty }).eq('id', id).eq('dealership_id', dealershipId)
+        emit({ type: 'data:refresh' })
     }, [])
 
     /**

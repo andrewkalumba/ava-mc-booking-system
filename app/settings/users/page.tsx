@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
 import { storeInvite } from '@/lib/invites';
+import { useAutoRefresh } from '@/lib/realtime';
+import { getSupabaseBrowser } from '@/lib/supabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -45,13 +47,28 @@ const ROLES: Record<Role, { label: string; color: string; permissions: string[] 
 
 const STORAGE_KEY = 'staff_users';
 
-const DEFAULT_USERS: StaffUser[] = [
-  { id: '1', name: 'Erik Lindström',  email: 'erik@avamc.se',   role: 'admin',   status: 'active',   lastLogin: '6 mar 2026',  bankidVerified: true,  personalNumber: '' },
-  { id: '2', name: 'Anna Svensson',   email: 'anna@avamc.se',   role: 'sales',   status: 'active',   lastLogin: '5 mar 2026',  bankidVerified: true,  personalNumber: '' },
-  { id: '3', name: 'Marcus Berg',     email: 'marcus@avamc.se', role: 'sales',   status: 'active',   lastLogin: '4 mar 2026',  bankidVerified: false, personalNumber: '' },
-  { id: '4', name: 'Sofia Dahl',      email: 'sofia@avamc.se',  role: 'service', status: 'active',   lastLogin: '3 mar 2026',  bankidVerified: true,  personalNumber: '' },
-  { id: '5', name: 'Lars Ekman',      email: 'lars@avamc.se',   role: 'service', status: 'inactive', lastLogin: '15 jan 2026', bankidVerified: false, personalNumber: '' },
-];
+// ─── Supabase staff loader ────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchRemoteUsers(dealershipId: string): Promise<StaffUser[]> {
+  const { data } = await getSupabaseBrowser()
+    .from('staff_users')
+    .select('*')
+    .eq('dealership_id', dealershipId)
+    .order('created_at', { ascending: true });
+  if (!data || data.length === 0) return [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return data.map((r: any) => ({
+    id:             String(r.id),
+    name:           r.name ?? '',
+    email:          r.email ?? '',
+    role:           (r.role as Role) ?? 'sales',
+    status:         (r.status as Status) ?? 'active',
+    lastLogin:      r.last_login ? new Date(r.last_login).toLocaleDateString('sv-SE') : '—',
+    bankidVerified: r.bankid_verified ?? false,
+    personalNumber: r.personal_number ?? '',
+  }));
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
@@ -87,13 +104,60 @@ export default function UsersSettingsPage() {
     const raw = localStorage.getItem('user');
     if (!raw) { router.push('/auth/login'); return; }
     const u = JSON.parse(raw);
+    if (u.role !== 'admin') {
+      toast.error('Only administrators can manage users and permissions.');
+      router.replace('/settings');
+      return;
+    }
     setCurrentUser(u);
     setAvatarUrl(u.avatarDataUrl || null);
 
-    const stored = localStorage.getItem(STORAGE_KEY);
-    setUsers(stored ? JSON.parse(stored) : DEFAULT_USERS);
-    setReady(true);
+    const dealershipId = u.dealershipId ?? '';
+    (async () => {
+      if (dealershipId) {
+        const remote = await fetchRemoteUsers(dealershipId);
+        if (remote.length > 0) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(remote));
+          setUsers(remote);
+          setReady(true);
+          return;
+        }
+      }
+      // Fallback: bootstrap with current admin only
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setUsers(JSON.parse(stored));
+      } else {
+        const adminUser: StaffUser = {
+          id:             '1',
+          name:           u.name || u.givenName || 'Admin',
+          email:          u.email || '',
+          role:           'admin',
+          status:         'active',
+          lastLogin:      new Date().toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' }),
+          bankidVerified: !!u.personalNumber,
+          personalNumber: u.personalNumber || '',
+        };
+        const initial = [adminUser];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
+        setUsers(initial);
+      }
+      setReady(true);
+    })();
   }, [router]);
+
+  useAutoRefresh(async () => {
+    const raw = localStorage.getItem('user');
+    if (!raw) return;
+    const u = JSON.parse(raw);
+    const dealershipId = u.dealershipId ?? '';
+    if (!dealershipId) return;
+    const remote = await fetchRemoteUsers(dealershipId);
+    if (remote.length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(remote));
+      setUsers(remote);
+    }
+  });
 
   const handleAvatarFile = (file: File) => {
     if (!file.type.startsWith('image/')) return;
@@ -164,11 +228,13 @@ export default function UsersSettingsPage() {
     if (!inviteName.trim() || !inviteEmail.trim()) return;
     setInviteSending(true);
     const dealershipName = currentUser?.dealershipName ?? 'BikeMeNow';
+    const dealershipId   = currentUser?.dealershipId   ?? '';
     const invite = storeInvite({
       email: inviteEmail.trim(),
       name:  inviteName.trim(),
       role:  inviteRole,
       dealershipName,
+      dealershipId,
     });
     const url = `${window.location.origin}/auth/accept-invite?token=${invite.token}`;
     setInviteLink(url);

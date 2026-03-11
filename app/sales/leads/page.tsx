@@ -4,36 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
+import { getLeads, type Lead } from '@/lib/leads';
+import { useAutoRefresh } from '@/lib/realtime';
 
-type Status = 'hot' | 'warm' | 'cold';
-type Stage = 'new' | 'contacted' | 'testride' | 'negotiating' | 'closed';
-
-interface Lead {
-  id: number;
-  name: string;
-  bike: string;
-  value: string;
-  time: string;
-  status: Status;
-  verified: boolean;
-  stage: Stage;
-  initials: string;
-}
-
-const INITIAL_LEADS: Lead[] = [
-  { id: 1,  name: 'Lars Andersson',   bike: 'Ninja ZX-6R',   value: '150k kr',  time: '2h ago',  status: 'hot',  verified: true,  stage: 'new',         initials: 'LA' },
-  { id: 2,  name: 'Maria Svensson',   bike: 'MT-07',          value: '90k kr',   time: '5h ago',  status: 'warm', verified: true,  stage: 'new',         initials: 'MS' },
-  { id: 3,  name: 'Erik Johansson',   bike: 'CB650R',         value: '105k kr',  time: '1d ago',  status: 'warm', verified: false, stage: 'contacted',   initials: 'EJ' },
-  { id: 4,  name: 'Petra Nilsson',    bike: 'GSX-S750',       value: '112k kr',  time: '1d ago',  status: 'hot',  verified: true,  stage: 'contacted',   initials: 'PN' },
-  { id: 5,  name: 'Oscar Berg',       bike: 'Duke 390',       value: '58k kr',   time: '2d ago',  status: 'cold', verified: false, stage: 'contacted',   initials: 'OB' },
-  { id: 6,  name: 'Anna Lindgren',    bike: 'Z900',           value: '128k kr',  time: '2d ago',  status: 'warm', verified: true,  stage: 'testride',    initials: 'AL' },
-  { id: 7,  name: 'Jonas Ek',         bike: 'Tracer 9 GT',    value: '175k kr',  time: '3d ago',  status: 'hot',  verified: true,  stage: 'testride',    initials: 'JE' },
-  { id: 8,  name: 'Sofia Karlsson',   bike: 'Ninja 400',      value: '75k kr',   time: '3d ago',  status: 'warm', verified: false, stage: 'negotiating', initials: 'SK' },
-  { id: 9,  name: 'Mikael Lund',      bike: 'MT-09 SP',       value: '162k kr',  time: '4d ago',  status: 'hot',  verified: true,  stage: 'negotiating', initials: 'ML' },
-  { id: 10, name: 'Hanna Björk',      bike: 'CB500F',         value: '68k kr',   time: '5d ago',  status: 'cold', verified: false, stage: 'closed',      initials: 'HB' },
-  { id: 11, name: 'Tobias Strand',    bike: 'Ninja ZX-6R',    value: '155k kr',  time: '6d ago',  status: 'warm', verified: true,  stage: 'closed',      initials: 'TS' },
-];
+type Status = Lead['status'];
+type Stage  = Lead['stage'];
 
 const STATUS_STYLE: Record<Status, { dot: string; text: string; bg: string }> = {
   hot:  { dot: 'bg-red-500',    text: 'text-red-700',    bg: 'bg-red-50' },
@@ -82,7 +59,7 @@ export default function PipelinePage() {
   const router = useRouter();
   const t = useTranslations('leads');
   const [ready, setReady] = useState(false);
-  const [leads, setLeads] = useState<Lead[]>(INITIAL_LEADS);
+  const [leads, setLeads] = useState<Lead[]>([]);
   const [search, setSearch] = useState('');
 
   const COLUMNS: { id: Stage; label: string; color: string; bg: string }[] = [
@@ -100,20 +77,19 @@ export default function PipelinePage() {
   };
 
   useEffect(() => {
-    const user = localStorage.getItem('user');
-    if (!user) { router.replace('/auth/login'); return; }
-
-    // Merge any leads created via the New Lead form
-    try {
-      const custom: Lead[] = JSON.parse(localStorage.getItem('custom_leads') || '[]');
-      if (custom.length > 0) setLeads([...custom, ...INITIAL_LEADS]);
-    } catch {
-      // ignore parse errors
+    const raw = localStorage.getItem('user');
+    if (!raw) { router.replace('/auth/login'); return; }
+    const u = JSON.parse(raw);
+    if (u.role === 'service') {
+      toast.error('The Sales Pipeline is not available for Service users.');
+      router.replace('/dashboard');
+      return;
     }
-
-    setReady(true);
+    getLeads().then(data => { setLeads(data); setReady(true); });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useAutoRefresh(() => { getLeads().then(setLeads); });
 
   if (!ready) return (
     <div className="flex items-center justify-center min-h-screen bg-[#f5f7fa]">

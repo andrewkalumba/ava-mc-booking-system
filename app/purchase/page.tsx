@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useInventory }   from '@/context/InventoryContext'
 import { supabase }       from '@/lib/supabase'
+import { getDealershipId } from '@/lib/tenant'
 import { vendorDetails }  from '@/data/vendors'
 import { POModal, STATUS_STYLE, formatCurrency, qtyKey, VendorItem } from '@/components/POModal'
 import { CreatePOModal, FlatInventoryItem } from '@/components/CreatePOModal'
@@ -142,8 +143,14 @@ export default function PurchasePage() {
     // Fetch historical POs (Approved / Sent / Received) from Supabase on mount
     useEffect(() => {
         async function loadHistoricalPOs() {
-            const { data: orders } = await supabase.from('purchase_orders').select('*')
-            const { data: items  } = await supabase.from('po_line_items').select('*')
+            const dealershipId = getDealershipId()
+            if (!dealershipId) return
+            const { data: orders } = await supabase.from('purchase_orders').select('*').eq('dealership_id', dealershipId)
+            // po_line_items are scoped via po_id FK; fetch only items for this dealer's POs
+            const poIds = (orders ?? []).map((o) => o.id)
+            const { data: items } = poIds.length > 0
+                ? await supabase.from('po_line_items').select('*').in('po_id', poIds)
+                : { data: [] }
             if (!orders) return
             const mapped: PurchaseOrder[] = orders.map((po) => ({
                 id:        po.id,
@@ -170,7 +177,14 @@ export default function PurchasePage() {
         loadHistoricalPOs()
     }, [])
 
-    const allPOs  = useMemo<PurchaseOrder[]>(() => [...autoPOs, ...userPOs, ...historicalPOs], [autoPOs, userPOs, historicalPOs])
+    const allPOs  = useMemo<PurchaseOrder[]>(() => {
+        const seen = new Set<string>()
+        return [...autoPOs, ...userPOs, ...historicalPOs].filter((p) => {
+            if (seen.has(p.id)) return false
+            seen.add(p.id)
+            return true
+        })
+    }, [autoPOs, userPOs, historicalPOs])
     const autoIds = useMemo(() => new Set(autoPOs.map((p) => p.id)), [autoPOs])
 
     const allPOsResolved = useMemo<PurchaseOrder[]>(
@@ -228,17 +242,20 @@ export default function PurchasePage() {
     }
 
     function handleSavePO(po: PurchaseOrder) {
+        const dealershipId = getDealershipId()
+        if (!dealershipId) return
         // Optimistic update
         setUserPOs((prev) => [po, ...prev])
         // Persist to Supabase in background
         supabase.from('purchase_orders').insert({
-            id:         po.id,
-            vendor:     po.vendor,
-            date:       po.date,
-            eta:        po.eta,
-            status:     po.status,
-            total_cost: po.totalCost,
-            notes:      po.notes ?? null,
+            id:            po.id,
+            vendor:        po.vendor,
+            date:          po.date,
+            eta:           po.eta,
+            status:        po.status,
+            total_cost:    po.totalCost,
+            notes:         po.notes ?? null,
+            dealership_id: dealershipId,
         }).then(() => {
             if (po.items.length > 0) {
                 supabase.from('po_line_items').insert(
@@ -261,7 +278,10 @@ export default function PurchasePage() {
         setPoStatusOverrides((prev) => ({ ...prev, [poId]: 'Sent' }))
         // Persist status to Supabase (skip auto-POs — they are not in the DB)
         if (!autoIds.has(poId)) {
-            supabase.from('purchase_orders').update({ status: 'Sent' }).eq('id', poId)
+            const dealershipId = getDealershipId()
+            if (dealershipId) {
+                supabase.from('purchase_orders').update({ status: 'Sent' }).eq('id', poId).eq('dealership_id', dealershipId)
+            }
         }
         setSelectedPO(null)
     }
@@ -272,25 +292,29 @@ export default function PurchasePage() {
         setPoEtaOverrides((prev)    => ({ ...prev, [poId]: eta }))
         // Persist to Supabase (skip auto-POs — they are not in the DB)
         if (!autoIds.has(poId)) {
-            const total = items.reduce((s, li) => s + li.lineTotal, 0)
-            supabase.from('purchase_orders')
-                .update({ status: 'Reviewed', eta, total_cost: total })
-                .eq('id', poId)
-            // Replace line items: delete old, insert updated
-            supabase.from('po_line_items').delete().eq('po_id', poId).then(() =>
-                supabase.from('po_line_items').insert(
-                    items.map((li) => ({
-                        po_id:          poId,
-                        inventory_id:   li.inventoryId,
-                        name:           li.name,
-                        article_number: li.articleNumber,
-                        order_qty:      li.orderQty,
-                        unit_cost:      li.unitCost,
-                        line_total:     li.lineTotal,
-                        size:           li.size ?? null,
-                    }))
+            const dealershipId = getDealershipId()
+            if (dealershipId) {
+                const total = items.reduce((s, li) => s + li.lineTotal, 0)
+                supabase.from('purchase_orders')
+                    .update({ status: 'Reviewed', eta, total_cost: total })
+                    .eq('id', poId)
+                    .eq('dealership_id', dealershipId)
+                // Replace line items: delete old, insert updated
+                supabase.from('po_line_items').delete().eq('po_id', poId).then(() =>
+                    supabase.from('po_line_items').insert(
+                        items.map((li) => ({
+                            po_id:          poId,
+                            inventory_id:   li.inventoryId,
+                            name:           li.name,
+                            article_number: li.articleNumber,
+                            order_qty:      li.orderQty,
+                            unit_cost:      li.unitCost,
+                            line_total:     li.lineTotal,
+                            size:           li.size ?? null,
+                        }))
+                    )
                 )
-            )
+            }
         }
         setSelectedPO(null)
     }

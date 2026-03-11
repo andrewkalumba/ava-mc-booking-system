@@ -7,7 +7,8 @@ import { useTranslations } from 'next-intl';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
 import { getCustomers } from '@/lib/customers';
-import { getInvoices } from '@/lib/invoices';
+import { getInvoices, type Invoice } from '@/lib/invoices';
+import { getLeads } from '@/lib/leads';
 import { useAutoRefresh } from '@/lib/realtime';
 
 // ── Count-up hook ──────────────────────────────────────
@@ -145,7 +146,7 @@ function getGreetingKey() {
 }
 
 // ── Compute last-6-months revenue bars from paid invoices ─────────────────────
-function buildRevenueData(invoices: ReturnType<typeof getInvoices>) {
+function buildRevenueData(invoices: Invoice[]) {
   const now = new Date();
   const months: { label: string; value: number; highlight: boolean }[] = [];
   for (let i = 5; i >= 0; i--) {
@@ -183,24 +184,19 @@ export default function DashboardPage() {
   const [liveLeads,     setLiveLeads]     = useState(0);
   const [revenueData,   setRevenueData]   = useState(() => buildRevenueData([]));
 
-  const loadStats = () => {
-    const invoices = getInvoices();
+  const loadStats = async () => {
+    const invoices = await getInvoices();
     const paidTotal = invoices
       .filter(inv => inv.status === 'paid')
       .reduce((s, inv) => s + inv.totalAmount, 0);
     setLiveRevenue(Math.round(paidTotal / 1000));
     setRevenueData(buildRevenueData(invoices));
 
-    const allCustomers = getCustomers();
+    const allCustomers = await getCustomers();
     setLiveCustomers(allCustomers.length);
 
-    // Leads: custom leads + 15 initial seed leads
-    try {
-      const custom = JSON.parse(localStorage.getItem('custom_leads') || '[]');
-      setLiveLeads(custom.length + 15);
-    } catch {
-      setLiveLeads(15);
-    }
+    const leads = await getLeads();
+    setLiveLeads(leads.length);
   };
 
   useEffect(() => {
@@ -219,7 +215,6 @@ export default function DashboardPage() {
 
     const handleStorage = (e: StorageEvent) => {
       if (e.key === 'dealership_profile') loadProfile();
-      if (e.key === 'app_invoices' || e.key === 'app_customers' || e.key === 'custom_leads') loadStats();
     };
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);

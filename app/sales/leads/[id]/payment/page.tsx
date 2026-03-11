@@ -57,7 +57,7 @@ const MOCK_ORDER: OrderSummary = {
   totalAmount: 133280,
   deposit: 13328,
   balanceDue: 119952,
-  location: 'AVA MC Stockholm',
+  location: '',
 };
 
 const MOCK_FINANCING: Record<FinancingBank, FinancingApplication> = {
@@ -391,7 +391,7 @@ function SveaInstoreFlow({ order }: { order: OrderSummary }) {
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                 </svg>
-                <p className="text-sm font-bold">Order Delivered — funds released to AVA MC</p>
+                <p className="text-sm font-bold">Order Delivered — funds released to {order.location || 'dealer'}</p>
               </div>
             ) : deliverStatus === 'deliver_failed' ? (
               <div className="space-y-2">
@@ -643,7 +643,7 @@ function SwishTab({ order }: { order: OrderSummary }) {
           </div>
           <div>
             <p className="text-lg font-black text-slate-900">123 456 78 90</p>
-            <p className="text-xs text-slate-400">AVA MC Stockholm — Swish Merchant</p>
+            <p className="text-xs text-slate-400">{order.location} — Swish Merchant</p>
           </div>
         </div>
         {/* REAL DATA GUIDE: Each location registers a Swish Handel number via swish.nu.
@@ -782,7 +782,7 @@ function CardTab({ order }: { order: OrderSummary }) {
             <p className="text-sm font-bold text-slate-900">Blipp &amp; Kortbetalning</p>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">Kontaktlös</span>
           </div>
-          <p className="text-xs text-slate-500 mt-0.5">Nets AXEPT · Terminal ID: NETS-STH-001 · AVA MC Stockholm</p>
+          <p className="text-xs text-slate-500 mt-0.5">Nets AXEPT · Terminal ID: NETS-STH-001 · {order.location}</p>
         </div>
         <span className={`text-[9px] px-2 py-0.5 rounded font-bold ${
           step === 'confirmed' ? 'bg-green-600 text-white' :
@@ -1523,10 +1523,13 @@ export default function PaymentPage() {
 
   const [ready, setReady] = useState(false);
   const [activeTab, setActiveTab] = useState<PaymentMethod>('financing');
+  const [dealerLocation, setDealerLocation] = useState('');
 
   useEffect(() => {
     const user = localStorage.getItem('user');
     if (!user) { router.replace('/auth/login'); return; }
+    const info = getDealerInfo();
+    setDealerLocation([info.name, info.city].filter(Boolean).join(' '));
     setReady(true);
   }, [router]);
 
@@ -1536,7 +1539,7 @@ export default function PaymentPage() {
     </div>
   );
 
-  const order = MOCK_ORDER;
+  const order = { ...MOCK_ORDER, location: dealerLocation };
 
   return (
     <div className="flex min-h-screen bg-[#f5f7fa]">

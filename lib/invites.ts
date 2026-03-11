@@ -11,6 +11,7 @@ export interface PendingInvite {
   name:           string;
   role:           'admin' | 'sales' | 'service';
   dealershipName: string;
+  dealershipId:   string;
   createdAt:      number;
   expiresAt:      number;  // 7 days
   accepted:       boolean;

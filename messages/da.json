@@ -627,7 +627,7 @@
       },
       "billing": {
         "title": "Abonnement og fakturering",
-        "desc": "Administrer din AVA MC-systemplan, fakturaer og betalingsmetode.",
+        "desc": "Administrer din abonnementsplan, fakturaer og betalingsmetode.",
         "badge": "Live"
       }
     }

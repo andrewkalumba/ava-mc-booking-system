@@ -40,25 +40,16 @@ export default function SettingsAuthPage() {
   }, [router]);
 
   // ── Admin role check ──────────────────────────────────────────────────────
-  // Returns true if the verified person is allowed into settings.
-  // Grants access when staff list is empty (first-time setup) or when the
-  // matched staff entry has role="admin". Denies only when explicitly found
-  // as sales/service.
-  const checkAdminRole = (verifiedName: string): boolean => {
+  // Read the role that was set during login / invite-acceptance from localStorage.
+  // The session cookie guarantees the user is authenticated; this checks their role.
+  const checkAdminRole = (): boolean => {
     try {
-      const staff: StaffUser[] = JSON.parse(localStorage.getItem('staff_users') || '[]');
-      if (staff.length === 0) return true;
-
-      // Fuzzy-match by first or last name (>3 chars to avoid short false-positives)
-      const parts = verifiedName.toLowerCase().split(/\s+/);
-      const match = staff.find(s =>
-        parts.some(p => p.length > 3 && s.name?.toLowerCase().includes(p)),
-      );
-
-      if (!match) return true; // not found → assume owner / unconfigured
-      return match.role === 'admin';
+      const raw = localStorage.getItem('user');
+      if (!raw) return false;
+      const u = JSON.parse(raw);
+      return u.role === 'admin';
     } catch {
-      return true;
+      return false;
     }
   };
 
@@ -68,9 +59,9 @@ export default function SettingsAuthPage() {
   };
 
   // ── BankID success ────────────────────────────────────────────────────────
-  const handleBankIDComplete = (result: BankIDResult) => {
+  const handleBankIDComplete = (_result: BankIDResult) => {
     setShowBankID(false);
-    if (checkAdminRole(result.user.name)) {
+    if (checkAdminRole()) {
       unlock();
     } else {
       setStep('denied');
@@ -93,8 +84,7 @@ export default function SettingsAuthPage() {
       return;
     }
     // personalNumber matched (or not stored — lenient for demo)
-    const name = user?.givenName || user?.name || '';
-    if (checkAdminRole(name)) {
+    if (checkAdminRole()) {
       unlock();
     } else {
       setStep('denied');

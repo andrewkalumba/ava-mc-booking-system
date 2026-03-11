@@ -627,7 +627,7 @@
       },
       "billing": {
         "title": "Prenumeration och fakturering",
-        "desc": "Hantera ditt AVA MC-systemplan, fakturor och betalningsmetod.",
+        "desc": "Hantera ditt prenumerationsplan, fakturor och betalningsmetod.",
         "badge": "Live"
       }
     }

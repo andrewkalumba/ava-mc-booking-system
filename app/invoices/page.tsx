@@ -134,10 +134,10 @@ export default function InvoicesPage() {
   useEffect(() => {
     const raw = localStorage.getItem('user');
     if (!raw) { router.replace('/auth/login'); return; }
-    setInvoices(getInvoices());
+    getInvoices().then(setInvoices);
   }, [router]);
 
-  useAutoRefresh(() => setInvoices(getInvoices()));
+  useAutoRefresh(() => { getInvoices().then(setInvoices); });
 
   // ── Computed stats ────────────────────────────────────────────────────────
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStoredConfig } from '@/lib/payments/config-store';
+import { getDealerConfig } from '@/lib/payments/dealer-config';
 import { getProvider } from '@/lib/payments/registry';
 
 /**
@@ -8,6 +9,10 @@ import { getProvider } from '@/lib/payments/registry';
  * Returns the display info (name, icon, description, category) for all payment
  * providers the dealer has enabled in their Settings → Payment Providers.
  * No credentials are ever returned.
+ *
+ * Priority:
+ *   1. Admin-saved config from data/payment-configs.json (via settings page)
+ *   2. Hardcoded default from lib/payments/dealer-config.ts
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -18,14 +23,16 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const config = await getStoredConfig(dealerId);
+    // 1. Prefer the admin-saved config (Settings → Payments)
+    const stored = getStoredConfig(dealerId);
+    const providerIds: string[] =
+      stored?.enabledProviders?.length
+        ? stored.enabledProviders
+        // 2. Fall back to hardcoded defaults so payment options always show
+        : getDealerConfig(dealerId).enabledProviders;
 
-    if (!config || !config.enabledProviders?.length) {
-      return NextResponse.json({ enabledProviders: [] });
-    }
-
-    const enabledProviders = config.enabledProviders
-      .map((id) => getProvider(id))
+    const enabledProviders = providerIds
+      .map((pid) => getProvider(pid))
       .filter(Boolean)
       .map((p) => ({
         id:           p!.id,

@@ -5,6 +5,7 @@ import {getMessages, getLocale} from 'next-intl/server';
 import { Toaster } from 'sonner';
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
+import RealtimeSync from "@/components/RealtimeSync";
 import { InventoryProvider } from "@/context/InventoryContext";
 
 const geistSans = Geist({
@@ -37,6 +38,7 @@ export default async function RootLayout({
       >
         <NextIntlClientProvider messages={messages}>
           <InventoryProvider>
+            <RealtimeSync />
             <Sidebar />
             {children}
           </InventoryProvider>

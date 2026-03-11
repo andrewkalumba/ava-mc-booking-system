@@ -627,7 +627,7 @@
       },
       "billing": {
         "title": "Subscription & Billing",
-        "desc": "Manage your AVA MC system plan, invoices, and payment method.",
+        "desc": "Manage your subscription plan, invoices, and payment method.",
         "badge": "Live"
       }
     }

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import BankIDModal from '@/components/bankIdModel';
 import { getInvite, consumeInvite } from '@/lib/invites';
+import { getSupabaseBrowser } from '@/lib/supabase';
 import type { BankIDResult } from '@/types';
 
 type PageState = 'loading' | 'invalid' | 'ready' | 'signing' | 'success';
@@ -38,10 +39,10 @@ function AcceptInviteInner() {
     setState('ready');
   }, [searchParams]);
 
-  const handleBankIDComplete = (result: BankIDResult) => {
+  const handleBankIDComplete = async (result: BankIDResult) => {
     if (!invite) return;
 
-    // Update the matching staff user record
+    // Update the matching staff user record in localStorage
     try {
       const staff: StaffUser[] = JSON.parse(localStorage.getItem('staff_users') ?? '[]');
       const updated = staff.map(s =>
@@ -52,8 +53,7 @@ function AcceptInviteInner() {
       localStorage.setItem('staff_users', JSON.stringify(updated));
     } catch { /* ignore */ }
 
-    // Save user session
-    localStorage.setItem('user', JSON.stringify({
+    const userObj = {
       name:           result.user.name,
       givenName:      result.user.givenName,
       surname:        result.user.surname,
@@ -62,8 +62,49 @@ function AcceptInviteInner() {
       roaring:        (result as any).roaring ?? null,
       email:          invite.email,
       dealershipName: invite.dealershipName,
+      dealershipId:   invite.dealershipId,
       role:           invite.role,
-    }));
+    };
+
+    // Persist user to localStorage (UI reads from here)
+    localStorage.setItem('user', JSON.stringify(userObj));
+
+    // Upsert this user into Supabase staff_users so future logins (email or
+    // BankID) can look them up and get their correct role + dealership_id.
+    if (invite.dealershipId) {
+      try {
+        const db = getSupabaseBrowser();
+        await (db as any)
+          .from('staff_users')
+          .upsert(
+            {
+              dealership_id:   invite.dealershipId,
+              email:           invite.email,
+              name:            result.user.name,
+              role:            invite.role,
+              status:          'active',
+              bankid_verified: true,
+              personal_number: result.user.personalNumber,
+              last_login:      new Date().toISOString(),
+            },
+            { onConflict: 'email' },
+          );
+      } catch { /* non-blocking — session cookie still created below */ }
+    }
+
+    // Create the server-side httpOnly session cookie so proxy.ts lets the
+    // user through without redirecting them back to login.
+    await fetch('/api/auth/session', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dealershipId:   invite.dealershipId,
+        dealershipName: invite.dealershipName,
+        name:           result.user.givenName ?? result.user.name,
+        email:          invite.email,
+        role:           invite.role,
+      }),
+    });
 
     consumeInvite(invite.token);
     setState('success');

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
 import { getDealerInfo } from '@/lib/dealer';
+import { getCustomerById, type Customer } from '@/lib/customers';
 
 type ProfileTab = 'overview' | 'vehicles' | 'invoices' | 'documents' | 'timeline' | 'gdpr';
 type SourceBadge = 'BankID' | 'Folkbokföring' | 'Manuell';
@@ -125,16 +126,36 @@ export default function CustomerProfilePage() {
   const [ready, setReady] = useState(false);
   const [tab, setTab] = useState<ProfileTab>('overview');
   const [dealerEmail, setDealerEmail] = useState('');
+  const [customer, setCustomer] = useState<Customer | null>(null);
 
   useEffect(() => {
     const user = localStorage.getItem('user');
     if (!user) { router.push('/auth/login'); return; }
     setDealerEmail(getDealerInfo().email);
+    getCustomerById(parseInt(id)).then(c => { if (c) setCustomer(c); });
     setReady(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const c = MOCK_DB[id];
+  const mockC = MOCK_DB[id];
+  const c = customer
+    ? {
+        ...mockC,
+        id:                customer.id,
+        firstName:         customer.firstName,
+        lastName:          customer.lastName,
+        personnummer:      customer.personnummer,
+        email:             customer.email,
+        phone:             customer.phone,
+        address:           customer.address,
+        birthDate:         customer.birthDate,
+        gender:            customer.gender,
+        bankidVerified:    customer.bankidVerified,
+        protectedIdentity: customer.protectedIdentity,
+        tag:               customer.tag,
+        totalSpent:        customer.lifetimeValue,
+      }
+    : mockC;
 
   if (!ready) return (
     <div className="flex items-center justify-center min-h-screen bg-[#f5f7fa]">

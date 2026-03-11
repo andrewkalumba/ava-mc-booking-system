@@ -1,5 +1,6 @@
-// ─── Invoice store ────────────────────────────────────────────────────────────
-// Pure localStorage backing store — no server required.
+// ─── Invoice store — Supabase backing store ───────────────────────────────────
+import { getSupabaseBrowser } from './supabase';
+import { getDealershipId } from './tenant';
 
 export interface Invoice {
   id:            string;   // INV-YYYY-NNN
@@ -16,141 +17,117 @@ export interface Invoice {
   paidDate?:     string;   // ISO
 }
 
-const INVOICES_KEY = 'app_invoices';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function db() { return getSupabaseBrowser() as any; }
 
-// ── Seed data (shown on first load so the page is never empty) ─────────────────
+// ── Column mapping ─────────────────────────────────────────────────────────────
 
-export const INITIAL_INVOICES: Invoice[] = [
-  {
-    id:            'INV-2026-005',
-    leadId:        'seed-5',
-    customerName:  'Erik Holm',
-    vehicle:       'Honda CB750 Hornet 2024',
-    agreementRef:  'AGR-2024-0094',
-    totalAmount:   89900,
-    vatAmount:     17980,
-    netAmount:     71920,
-    paymentMethod: 'Klarna Finansiering',
-    status:        'paid',
-    issueDate:     '2026-03-05T14:22:00.000Z',
-    paidDate:      '2026-03-05T14:22:00.000Z',
-  },
-  {
-    id:            'INV-2026-004',
-    leadId:        'seed-4',
-    customerName:  'Sofia Lindqvist',
-    vehicle:       'Yamaha MT-07 2024',
-    agreementRef:  'AGR-2024-0093',
-    totalAmount:   79900,
-    vatAmount:     15980,
-    netAmount:     63920,
-    paymentMethod: 'Swish',
-    status:        'paid',
-    issueDate:     '2026-02-28T10:15:00.000Z',
-    paidDate:      '2026-02-28T10:15:00.000Z',
-  },
-  {
-    id:            'INV-2026-003',
-    leadId:        'seed-3',
-    customerName:  'Marcus Pettersson',
-    vehicle:       'Kawasaki Ninja ZX-6R 2024',
-    agreementRef:  'AGR-2024-0092',
-    totalAmount:   133280,
-    vatAmount:     26656,
-    netAmount:     106624,
-    paymentMethod: 'Svea Finansiering',
-    status:        'paid',
-    issueDate:     '2026-02-20T09:40:00.000Z',
-    paidDate:      '2026-02-20T09:40:00.000Z',
-  },
-  {
-    id:            'INV-2026-002',
-    leadId:        'seed-2',
-    customerName:  'Anna Bergström',
-    vehicle:       'BMW R1250 GS Adventure 2024',
-    agreementRef:  'AGR-2024-0091',
-    totalAmount:   215000,
-    vatAmount:     43000,
-    netAmount:     172000,
-    paymentMethod: 'Banköverföring',
-    status:        'paid',
-    issueDate:     '2026-02-10T13:55:00.000Z',
-    paidDate:      '2026-02-12T08:00:00.000Z',
-  },
-  {
-    id:            'INV-2026-001',
-    leadId:        'seed-1',
-    customerName:  'Johan Andersson',
-    vehicle:       'Ducati Panigale V4 2024',
-    agreementRef:  'AGR-2024-0090',
-    totalAmount:   189000,
-    vatAmount:     37800,
-    netAmount:     151200,
-    paymentMethod: '—',
-    status:        'pending',
-    issueDate:     '2026-03-06T11:30:00.000Z',
-  },
-];
+function mapDbToInvoice(row: Record<string, unknown>): Invoice {
+  return {
+    id:            row.id            as string,
+    leadId:        String(row.lead_id ?? ''),
+    customerName:  (row.customer_name  as string) ?? '',
+    vehicle:       (row.vehicle        as string) ?? '',
+    agreementRef:  (row.agreement_ref  as string) ?? '',
+    totalAmount:   parseFloat(String(row.total_amount ?? '0')),
+    vatAmount:     parseFloat(String(row.vat_amount   ?? '0')),
+    netAmount:     parseFloat(String(row.net_amount   ?? '0')),
+    paymentMethod: (row.payment_method as string) ?? '',
+    status:        (row.status         as 'paid' | 'pending') ?? 'pending',
+    issueDate:     (row.issue_date     as string) ?? new Date().toISOString(),
+    paidDate:      (row.paid_date      as string) ?? undefined,
+  };
+}
+
+function mapInvoiceToDb(inv: Omit<Invoice, 'id' | 'issueDate'>): Record<string, unknown> {
+  return {
+    lead_id:        inv.leadId       || null,
+    customer_name:  inv.customerName,
+    vehicle:        inv.vehicle,
+    agreement_ref:  inv.agreementRef || null,
+    total_amount:   inv.totalAmount,
+    vat_amount:     inv.vatAmount,
+    net_amount:     inv.netAmount,
+    payment_method: inv.paymentMethod || '',
+    status:         inv.status,
+    paid_date:      inv.paidDate     || null,
+  };
+}
+
+// ── ID generator ───────────────────────────────────────────────────────────────
+
+async function nextInvoiceId(dealershipId: string): Promise<string> {
+  const year = new Date().getFullYear();
+  const { data } = await db()
+    .from('invoices')
+    .select('id')
+    .eq('dealership_id', dealershipId)
+    .like('id', `INV-${year}-%`)
+    .order('id', { ascending: false })
+    .limit(1);
+  const last = (data as any[])?.[0]?.id as string | undefined;
+  const n = last ? parseInt(last.split('-').pop() ?? '0', 10) : 0;
+  return `INV-${year}-${String(n + 1).padStart(3, '0')}`;
+}
 
 // ── Read ───────────────────────────────────────────────────────────────────────
 
-export function getInvoices(): Invoice[] {
-  if (typeof window === 'undefined') return INITIAL_INVOICES;
-  try {
-    const stored = localStorage.getItem(INVOICES_KEY);
-    if (stored) return JSON.parse(stored);
-    // First run — seed initial data
-    localStorage.setItem(INVOICES_KEY, JSON.stringify(INITIAL_INVOICES));
-    return INITIAL_INVOICES;
-  } catch {
-    return INITIAL_INVOICES;
-  }
-}
-
-// ── Invoice number generator ───────────────────────────────────────────────────
-
-function nextId(list: Invoice[]): string {
-  const year = new Date().getFullYear();
-  const max  = list.reduce((m, inv) => {
-    const parts = inv.id.split('-');
-    const n     = parseInt(parts[parts.length - 1] || '0', 10);
-    return n > m ? n : m;
-  }, 0);
-  return `INV-${year}-${String(max + 1).padStart(3, '0')}`;
+export async function getInvoices(): Promise<Invoice[]> {
+  const dealershipId = getDealershipId();
+  if (!dealershipId) return [];
+  const { data, error } = await db()
+    .from('invoices')
+    .select('*')
+    .eq('dealership_id', dealershipId)
+    .order('issue_date', { ascending: false });
+  if (error) { console.error('[invoices] getInvoices:', error.message); return []; }
+  return (data ?? []).map((r: Record<string, unknown>) => mapDbToInvoice(r));
 }
 
 // ── Write ──────────────────────────────────────────────────────────────────────
 
-export function createInvoice(
+export async function createInvoice(
   data: Omit<Invoice, 'id' | 'issueDate'>,
-): Invoice {
-  const list = getInvoices();
+): Promise<Invoice> {
+  const dealershipId = getDealershipId();
+  if (!dealershipId) throw new Error('Not authenticated: no dealership context');
 
-  // Deduplicate — don't generate a second paid invoice for the same lead
-  if (data.status === 'paid') {
-    const existing = list.find(inv => inv.leadId === data.leadId && inv.status === 'paid');
-    if (existing) return existing;
+  // Deduplicate — don't create a second paid invoice for the same lead
+  if (data.status === 'paid' && data.leadId) {
+    const { data: existing } = await db()
+      .from('invoices')
+      .select('*')
+      .eq('lead_id', data.leadId)
+      .eq('dealership_id', dealershipId)
+      .eq('status', 'paid')
+      .maybeSingle();
+    if (existing) return mapDbToInvoice(existing as Record<string, unknown>);
   }
 
-  const inv: Invoice = {
-    ...data,
-    id:        nextId(list),
-    issueDate: new Date().toISOString(),
+  const id = await nextInvoiceId(dealershipId);
+  const row = {
+    id,
+    issue_date:    new Date().toISOString(),
+    dealership_id: dealershipId,
+    ...mapInvoiceToDb(data),
   };
-
-  localStorage.setItem(INVOICES_KEY, JSON.stringify([inv, ...list]));
-  return inv;
+  const { data: created, error } = await db()
+    .from('invoices')
+    .insert(row as any)
+    .select()
+    .single();
+  if (error || !created) throw new Error(error?.message ?? 'createInvoice failed');
+  return mapDbToInvoice(created as Record<string, unknown>);
 }
 
-export function markInvoicePaid(leadId: string, paymentMethod: string): void {
-  const list = getInvoices();
-  const idx  = list.findIndex(inv => inv.leadId === leadId && inv.status === 'pending');
-  if (idx === -1) return;
-  list[idx] = {
-    ...list[idx],
-    status:        'paid',
-    paidDate:      new Date().toISOString(),
-    paymentMethod,
-  };
-  localStorage.setItem(INVOICES_KEY, JSON.stringify(list));
+export async function markInvoicePaid(leadId: string, paymentMethod: string): Promise<void> {
+  const dealershipId = getDealershipId();
+  if (!dealershipId) return;
+  const { error } = await db()
+    .from('invoices')
+    .update({ status: 'paid', paid_date: new Date().toISOString(), payment_method: paymentMethod } as any)
+    .eq('lead_id', leadId)
+    .eq('dealership_id', dealershipId)
+    .eq('status', 'pending');
+  if (error) console.error('[invoices] markInvoicePaid:', error.message);
 }

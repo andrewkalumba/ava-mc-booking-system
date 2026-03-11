@@ -20,9 +20,38 @@ export interface NotificationPreferences {
   newCustomer:     { inApp: boolean; email: boolean; sms: boolean };
 }
 
-const NOTIFS_KEY = 'app_notifications';
-const PREFS_KEY  = 'notification_preferences';
 export const NOTIFS_EVENT = 'app_notifications_updated';
+
+// ── Scoped key helpers ────────────────────────────────────────────────────────
+// Keys are scoped per dealership + user so notifications are never shared
+// across dealerships (tenant isolation) or across different staff accounts
+// on the same device.
+
+function getCurrentUserCtx(): { dealershipId: string; email: string } {
+  if (typeof window === 'undefined') return { dealershipId: '', email: '' };
+  try {
+    const u = JSON.parse(localStorage.getItem('user') ?? '{}');
+    return {
+      dealershipId: (u.dealershipId as string) || '',
+      email:        (u.email        as string) || '',
+    };
+  } catch {
+    return { dealershipId: '', email: '' };
+  }
+}
+
+/** Returns the localStorage key for notifications for the current signed-in user. */
+export function getNotifsKey(): string {
+  const { dealershipId, email } = getCurrentUserCtx();
+  if (!dealershipId && !email) return 'app_notifications'; // unauthenticated fallback
+  return `app_notifications_${dealershipId}_${email}`;
+}
+
+function getPrefsKey(): string {
+  const { dealershipId, email } = getCurrentUserCtx();
+  if (!dealershipId && !email) return 'notification_preferences';
+  return `notification_prefs_${dealershipId}_${email}`;
+}
 
 export const DEFAULT_PREFS: NotificationPreferences = {
   newLead:         { inApp: true,  email: true,  sms: false },
@@ -35,13 +64,13 @@ export const DEFAULT_PREFS: NotificationPreferences = {
 
 export function getNotifications(): AppNotification[] {
   try {
-    return JSON.parse(localStorage.getItem(NOTIFS_KEY) || '[]');
+    return JSON.parse(localStorage.getItem(getNotifsKey()) || '[]');
   } catch { return []; }
 }
 
 export function getPreferences(): NotificationPreferences {
   try {
-    const saved = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
+    const saved = JSON.parse(localStorage.getItem(getPrefsKey()) || '{}');
     return {
       newLead:         { ...DEFAULT_PREFS.newLead,         ...saved.newLead },
       agreementSigned: { ...DEFAULT_PREFS.agreementSigned, ...saved.agreementSigned },
@@ -68,29 +97,29 @@ export function addNotification(n: Omit<AppNotification, 'id' | 'createdAt' | 'r
     read:      false,
   };
   const updated = [item, ...list].slice(0, 50); // keep latest 50
-  localStorage.setItem(NOTIFS_KEY, JSON.stringify(updated));
+  localStorage.setItem(getNotifsKey(), JSON.stringify(updated));
   broadcast();
 }
 
 export function markRead(id: string): void {
   const updated = getNotifications().map(n => n.id === id ? { ...n, read: true } : n);
-  localStorage.setItem(NOTIFS_KEY, JSON.stringify(updated));
+  localStorage.setItem(getNotifsKey(), JSON.stringify(updated));
   broadcast();
 }
 
 export function markAllRead(): void {
   const updated = getNotifications().map(n => ({ ...n, read: true }));
-  localStorage.setItem(NOTIFS_KEY, JSON.stringify(updated));
+  localStorage.setItem(getNotifsKey(), JSON.stringify(updated));
   broadcast();
 }
 
 export function clearAll(): void {
-  localStorage.removeItem(NOTIFS_KEY);
+  localStorage.removeItem(getNotifsKey());
   broadcast();
 }
 
 export function savePreferences(prefs: NotificationPreferences): void {
-  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  localStorage.setItem(getPrefsKey(), JSON.stringify(prefs));
 }
 
 // ── Main notify() helper ──────────────────────────────────────────────────────

@@ -5,6 +5,10 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import Sidebar from '@/components/Sidebar';
+import { advanceLeadToNegotiating } from '@/lib/leads';
+import { emit } from '@/lib/realtime';
+import { getSupabaseBrowser } from '@/lib/supabase';
+import { getDealershipId } from '@/lib/tenant';
 
 interface AgreementData {
   agreementNumber: string;
@@ -22,22 +26,20 @@ interface AgreementData {
   financingApr: number;
 }
 
-const MOCK_AGREEMENTS: Record<string, AgreementData> = {
-  default: {
-    agreementNumber: 'AGR-2024-0089',
-    customerName: 'Lars Bergman',
-    personnummer: '197506123456',
-    vehicle: 'Kawasaki Ninja ZX-6R 2024',
-    vin: 'JKBZXR636PA012345',
-    accessories: 'Akrapovic + Tank Pad + Crash Protectors',
-    tradeIn: 'Kawasaki Ninja 300 2020',
-    tradeInCredit: 32000,
-    totalPrice: 133280,
-    vatAmount: 26656,
-    financingMonths: 36,
-    financingMonthly: 4092,
-    financingApr: 4.9,
-  },
+const BLANK_AGREEMENT: AgreementData = {
+  agreementNumber: 'AGR-2024-0089',
+  customerName: '',
+  personnummer: '',
+  vehicle: 'Kawasaki Ninja ZX-6R 2024',
+  vin: 'JKBZXR636PA012345',
+  accessories: 'Akrapovic + Tank Pad + Crash Protectors',
+  tradeIn: 'Kawasaki Ninja 300 2020',
+  tradeInCredit: 32000,
+  totalPrice: 133280,
+  vatAmount: 26656,
+  financingMonths: 36,
+  financingMonthly: 4092,
+  financingApr: 4.9,
 };
 
 // ─── Display row (read-only) ──────────────────────────────────────────────────
@@ -144,16 +146,46 @@ export default function CreateAgreementPage() {
   const id = (params?.id as string) || 'default';
   const [ready, setReady] = useState(false);
 
-  const [agr, setAgr] = useState<AgreementData>(MOCK_AGREEMENTS.default);
+  const [agr, setAgr] = useState<AgreementData>(BLANK_AGREEMENT);
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState<AgreementData | null>(null);
 
   useEffect(() => {
-    const base = MOCK_AGREEMENTS[id] ?? MOCK_AGREEMENTS.default;
-    setAgr(base);
     const user = localStorage.getItem('user');
     if (!user) { router.replace('/auth/login'); return; }
-    setReady(true);
+
+    const leadId = Number(id);
+    if (Number.isNaN(leadId)) {
+      setReady(true);
+      return;
+    }
+
+    (async () => {
+      // Fetch the real lead from Supabase
+      const dealershipId = getDealershipId();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = getSupabaseBrowser() as any;
+      const { data: lead } = await sb
+        .from('leads')
+        .select('*')
+        .eq('id', leadId)
+        .eq('dealership_id', dealershipId)
+        .maybeSingle();
+
+      if (lead) {
+        setAgr(prev => ({
+          ...prev,
+          customerName: (lead.name         as string) ?? '',
+          personnummer: (lead.personnummer  as string) ?? '',
+        }));
+      }
+
+      // Advance the lead from 'new'/'contacted' → 'negotiating' when agreement is opened
+      await advanceLeadToNegotiating(leadId);
+      emit({ type: 'lead:updated', payload: { id: String(leadId), status: 'negotiating' } });
+
+      setReady(true);
+    })();
   }, [id, router]);
 
   const startEdit  = () => { setDraft({ ...agr }); setIsEditing(true); };

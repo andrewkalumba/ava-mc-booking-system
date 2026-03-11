@@ -33,7 +33,14 @@ export default function BillingPage() {
   const [dealer, setDealer] = useState({ email: '', orgNr: '', vatNr: '' });
 
   useEffect(() => {
-    if (!localStorage.getItem('user')) { router.replace('/auth/login'); return; }
+    const raw = localStorage.getItem('user');
+    if (!raw) { router.replace('/auth/login'); return; }
+    const u = JSON.parse(raw);
+    if (u.role !== 'admin') {
+      toast.error('Only administrators can manage billing and subscription.');
+      router.replace('/settings');
+      return;
+    }
     try {
       const saved = JSON.parse(localStorage.getItem('billing_prefs') || '{}');
       if (saved.plan)  setPlan(saved.plan);

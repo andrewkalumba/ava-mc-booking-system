@@ -66,7 +66,7 @@ const DEAL = {
   currency:       'SEK',
   bankgiro:       '1234-5678',
   ocr:            '20240089',
-  receiver:       'AVA MC AB',
+  receiver:       '',
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -143,7 +143,7 @@ export default function AgreementPaymentPage() {
     const raw = localStorage.getItem('user');
     if (!raw) { router.replace('/auth/login'); return; }
     const user = JSON.parse(raw);
-    const dealerId = (user.dealershipName ?? user.dealership ?? 'ava-mc')
+    const dealerId = (user.dealershipName || user.dealership || 'ava-mc')
       .toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     setReady(true);
     fetch(`/api/payments/enabled?dealerId=${dealerId}`)

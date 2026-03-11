@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -10,6 +10,10 @@ import Sidebar from '@/components/Sidebar';
 export default function SettingsPage() {
   const router = useRouter();
   const t = useTranslations('settings');
+  const [userRole, setUserRole] = useState<string>('');
+
+  // Sections that require admin role to configure
+  const ADMIN_ONLY_IDS = ['payments', 'integrations', 'users', 'billing'];
 
   const SETTINGS_SECTIONS = [
     {
@@ -72,11 +76,18 @@ export default function SettingsPage() {
       badge:    t('sections.billing.badge'),
       badgeCls: 'bg-green-100 text-green-700',
     },
-  ] as const;
+  ];
+
+  const isAdmin = userRole === 'admin';
+  const visibleSections = SETTINGS_SECTIONS.filter(
+    s => !ADMIN_ONLY_IDS.includes(s.id) || isAdmin,
+  );
 
   useEffect(() => {
     const raw = localStorage.getItem('user');
-    if (!raw) router.push('/auth/login');
+    if (!raw) { router.push('/auth/login'); return; }
+    const u = JSON.parse(raw);
+    setUserRole(u.role ?? 'sales');
   }, [router]);
 
   return (
@@ -97,8 +108,17 @@ export default function SettingsPage() {
           </div>
 
           {/* Settings grid */}
+          {!isAdmin && (
+            <div className="mb-4 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <span className="text-amber-500 mt-0.5">🔒</span>
+              <p className="text-xs text-amber-700">
+                Some settings are only available to administrators. Contact your admin to configure payments, integrations, billing and user management.
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {SETTINGS_SECTIONS.map(s => (
+            {visibleSections.map(s => (
               <Link
                 key={s.id}
                 href={s.href}

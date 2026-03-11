@@ -8,6 +8,7 @@ import Sidebar from '@/components/Sidebar';
 import BankIDModal from '@/components/bankIdModel';
 import PhoneInput from '@/components/PhoneInput';
 import type { BankIDResult } from '@/types';
+import { createCustomer } from '@/lib/customers';
 
 const EXISTING_CUSTOMERS: Record<string, { id: number; name: string; lastSeen: string; vehicles: number; lifetimeValue: number; purchases: number }> = {
   '198506122384': { id: 1, name: 'Anna Svensson', lastSeen: '8 februari 2026', vehicles: 3, lifetimeValue: 445000, purchases: 5 },
@@ -32,6 +33,7 @@ export default function NewCustomerPage() {
   const [bankIDEmail, setBankIDEmail] = useState('');
   const [bankIDPhone, setBankIDPhone] = useState('');
   const [protectedPhone, setProtectedPhone] = useState('');
+  const [protectedEmail, setProtectedEmail] = useState('');
   const [manual, setManual] = useState(EMPTY_MANUAL);
 
   useEffect(() => {
@@ -56,10 +58,70 @@ export default function NewCustomerPage() {
     }
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success(t('new.savedToast'), { description: t('new.savedToastDesc') });
-    router.push('/customers');
+    try {
+      if (step === 'manual') {
+        await createCustomer({
+          firstName: manual.firstName,
+          lastName: manual.lastName,
+          personnummer: manual.personnummer || '',
+          email: manual.email,
+          phone: manual.phone,
+          source: 'Manual',
+          vehicles: 0,
+          lifetimeValue: 0,
+          lastActivity: new Date().toISOString(),
+          tag: 'New',
+          bankidVerified: false,
+          protectedIdentity: false,
+          address: [manual.address, manual.postalCode, manual.city].filter(Boolean).join(', '),
+          gender: manual.gender === 'Kvinna' ? 'Kvinna' : 'Man',
+          birthDate: manual.birthDate || '',
+        });
+      } else if (step === 'new' && bankIDResult) {
+        const r = bankIDResult.roaring;
+        await createCustomer({
+          firstName: bankIDResult.user.givenName || bankIDResult.user.name.split(' ')[0],
+          lastName: bankIDResult.user.surname || bankIDResult.user.name.split(' ').slice(1).join(' '),
+          personnummer: bankIDResult.user.personalNumber.replace(/-/g, ''),
+          email: bankIDEmail,
+          phone: bankIDPhone,
+          source: 'BankID',
+          vehicles: 0,
+          lifetimeValue: 0,
+          lastActivity: new Date().toISOString(),
+          tag: 'New',
+          bankidVerified: true,
+          protectedIdentity: false,
+          address: r?.address ? `${r.address.street}, ${r.address.postalCode} ${r.address.city}` : '',
+          gender: r?.gender === 'F' ? 'Kvinna' : 'Man',
+          birthDate: bankIDResult.user.dateOfBirth || '',
+        });
+      } else if (step === 'protected' && bankIDResult) {
+        await createCustomer({
+          firstName: bankIDResult.user.givenName || '',
+          lastName: bankIDResult.user.surname || '',
+          personnummer: bankIDResult.user.personalNumber.replace(/-/g, ''),
+          email: protectedEmail,
+          phone: protectedPhone,
+          source: 'BankID',
+          vehicles: 0,
+          lifetimeValue: 0,
+          lastActivity: new Date().toISOString(),
+          tag: 'New',
+          bankidVerified: true,
+          protectedIdentity: true,
+          address: '',
+          gender: 'Man',
+          birthDate: bankIDResult.user.dateOfBirth || '',
+        });
+      }
+      toast.success(t('new.savedToast'), { description: t('new.savedToastDesc') });
+      router.push('/customers');
+    } catch (err: any) {
+      toast.error('Failed to save customer', { description: err.message });
+    }
   };
 
   if (!ready) return (
@@ -623,7 +685,7 @@ export default function NewCustomerPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-semibold text-slate-600 mb-1">{t('profile.fields.email')}</label>
-                        <input type="email" placeholder="e-post@example.se" className="w-full px-3 py-2 rounded-lg border-2 border-dashed border-orange-300 bg-white text-sm focus:border-[#FF6B2C] outline-none" required />
+                        <input type="email" value={protectedEmail} onChange={e => setProtectedEmail(e.target.value)} placeholder="e-post@example.se" className="w-full px-3 py-2 rounded-lg border-2 border-dashed border-orange-300 bg-white text-sm focus:border-[#FF6B2C] outline-none" required />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold text-slate-600 mb-1">{t('profile.fields.phone')}</label>

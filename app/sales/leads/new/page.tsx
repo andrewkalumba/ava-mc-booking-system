@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
 import { notify } from '@/lib/notifications';
+import { createLead } from '@/lib/leads';
 import BankIDModal from '@/components/bankIdModel';
 import PhoneInput from '@/components/PhoneInput';
 import type { BankIDResult, Demo } from '@/types';
@@ -65,41 +66,33 @@ const NewLeadPage = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      const lead = await createLead({
+        name:        formData.name,
+        bike:        formData.interest || '—',
+        value:       0,
+        lead_status: 'warm',
+        stage:       'new',
+        email:       formData.email,
+        phone:       formData.phone,
+        personnummer: bankIDData?.user.personalNumber?.replace(/-/g, '') || null,
+        source:      bankIDData ? 'BankID' : 'Walk-in',
+        notes:       formData.notes || undefined,
+      });
 
-    // Build initials from name
-    const parts = formData.name.trim().split(/\s+/);
-    const initials = parts.length >= 2
-      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-      : formData.name.slice(0, 2).toUpperCase();
-
-    const newLead = {
-      id: Date.now(),
-      name: formData.name,
-      bike: formData.interest || '—',
-      value: '—',
-      time: 'Just now',
-      status: 'warm' as const,
-      verified: !!bankIDData,
-      stage: 'new' as const,
-      initials,
-      email: formData.email,
-      phone: formData.phone,
-    };
-
-    // Persist to localStorage so the pipeline page can display it
-    const existing = JSON.parse(localStorage.getItem('custom_leads') || '[]');
-    localStorage.setItem('custom_leads', JSON.stringify([newLead, ...existing]));
-
-    notify('newLead', {
-      type:    'lead',
-      title:   tNotif('actions.newLead.title'),
-      message: `${newLead.name} ${tNotif('actions.newLead.interestedIn')} ${newLead.bike}`,
-      href:    '/sales/leads',
-    });
-    toast.success('Lead created successfully!');
-    router.push('/sales/leads');
+      notify('newLead', {
+        type:    'lead',
+        title:   tNotif('actions.newLead.title'),
+        message: `${lead.name} ${tNotif('actions.newLead.interestedIn')} ${lead.bike}`,
+        href:    '/sales/leads',
+      });
+      toast.success('Lead created successfully!');
+      router.push('/sales/leads');
+    } catch (err: any) {
+      toast.error('Failed to create lead', { description: err.message });
+    }
   };
 
   const matchingVehicles = [
