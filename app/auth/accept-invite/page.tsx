@@ -80,7 +80,9 @@ function AcceptInviteInner() {
 
         {/* Logo */}
         <div className="text-center mb-6">
-          <span className="text-2xl font-extrabold tracking-tight text-[#FF6B2C]">BikeMeNow</span>
+          <div className="bg-white rounded-xl px-2 py-1 border border-slate-100">
+            <img src="/BikeMeNow_logo_test.png" alt="BikeMeNow" className="h-8 w-auto object-contain" />
+          </div>
         </div>
 
         {/* Loading */}

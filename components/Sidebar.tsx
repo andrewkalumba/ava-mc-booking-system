@@ -136,19 +136,13 @@ export default function Sidebar() {
 
         {/* Logo */}
         <div className="px-5 py-5 shrink-0">
-          <Link href="/dashboard" className="flex items-center gap-3 mb-3 hover:opacity-80 transition-opacity">
-            <div className="w-8 h-8 bg-[#FF6B2C] rounded-lg flex items-center justify-center shrink-0">
-              {/* Motorcycle SVG mark */}
-              <svg viewBox="0 0 20 20" className="w-5 h-5" fill="white">
-                <circle cx="4.5" cy="14.5" r="2" />
-                <circle cx="15.5" cy="14.5" r="2" />
-                <path d="M4.5 14.5H3.5a.5.5 0 0 1-.48-.36L2 10h5l.8 2.4H11L12.5 8H15l.5 1.5L13 11v2a.5.5 0 0 1-.5.5H7.5" />
-                <path d="M7.5 10L9 7h3l.8 1.5" />
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-white font-bold text-lg leading-none tracking-tight">BikeMeNow</h1>
-              <p className="text-[10px] text-slate-500 mt-0.5 font-semibold tracking-widest uppercase">BikeMe.Now</p>
+          <Link href="/dashboard" className="flex items-center mb-3 hover:opacity-80 transition-opacity">
+            <div className="bg-white rounded-lg p-1 shrink-0">
+              <img
+                src="/BikeMeNow_logo_test.png"
+                alt="BikeMeNow"
+                className="h-10 w-auto object-contain"
+              />
             </div>
           </Link>
           {/* Subscriber dealer badge — shows the current tenant's dealership name */}
