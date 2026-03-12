@@ -32,6 +32,14 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# BankID certificates
+# Production certs: NEVER commit!
+# Test cert (FPTestcert5_20240610.p12) is public BankID test cert — always keep tracked
+/certs/*.pem
+/certs/*.pfx
+!/certs/FPTestcert5_20240610.p12
 
 # vercel
 .vercel
@@ -39,3 +47,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# database
+*.db
+*.db-journal

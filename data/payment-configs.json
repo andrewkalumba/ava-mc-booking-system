@@ -1,0 +1,128 @@
+{
+  "ava-mc": {
+    "dealerId": "ava-mc",
+    "dealerName": "",
+    "enabledProviders": [
+      "svea",
+      "santander",
+      "klarna",
+      "swish",
+      "nets",
+      "stripe",
+      "bank_transfer"
+    ],
+    "primaryFinancing": "",
+    "credentials": {},
+    "updatedAt": "2026-03-11T01:20:46.714Z"
+  },
+  "trial-dealers-uganda": {
+    "dealerId": "trial-dealers-uganda",
+    "dealerName": "Trial dealers Uganda",
+    "enabledProviders": [
+      "svea",
+      "klarna",
+      "swish",
+      "nets",
+      "bank_transfer"
+    ],
+    "primaryFinancing": "",
+    "credentials": {
+      "klarna": {
+        "KLARNA_API_USERNAME": "b531f2ac-ddd1-439a-8501-7e15dc776312",
+        "KLARNA_API_PASSWORD": "klarna_test_api_cjhIMlBuP2ZFQW16NDZUKDNyVEVFQ2N4KkRZa2g_OS8sYjUzMWYyYWMtZGRkMS00MzlhLTg1MDEtN2UxNWRjNzc2MzEyLDEsSEUvYnNHTW8rMndnZUxoY3Q2WTExSEtSOEtjeVhmNStvb1RSMnVGSjZ3Yz0"
+      },
+      "nets": {
+        "NETS_SECRET_KEY": "b01f59bd62814ca8a7325b7c1257bbd5",
+        "NETS_CHECKOUT_KEY": "4df06dc769594adb90e31780ce7bccff",
+        "NETS_MERCHANT_ID": "100086708"
+      }
+    },
+    "updatedAt": "2026-03-04T00:20:09.701Z"
+  },
+  "": {
+    "dealerId": "",
+    "dealerName": "",
+    "enabledProviders": [
+      "svea",
+      "santander",
+      "klarna",
+      "swish",
+      "nets",
+      "bank_transfer"
+    ],
+    "primaryFinancing": "",
+    "credentials": {},
+    "updatedAt": "2026-03-11T01:07:39.931Z"
+  },
+  "ava-mc-ab": {
+    "dealerId": "ava-mc-ab",
+    "dealerName": "AVA MC AB",
+    "enabledProviders": [
+      "svea",
+      "swish"
+    ],
+    "primaryFinancing": "",
+    "credentials": {},
+    "updatedAt": "2026-03-09T12:19:24.875Z"
+  },
+  "swedish-motors-ab": {
+    "dealerId": "swedish-motors-ab",
+    "dealerName": "Swedish Motors AB",
+    "enabledProviders": [
+      "svea",
+      "klarna",
+      "swish"
+    ],
+    "primaryFinancing": "",
+    "credentials": {},
+    "updatedAt": "2026-03-10T03:00:56.517Z"
+  },
+  "rockin-motors-ab": {
+    "dealerId": "rockin-motors-ab",
+    "dealerName": "Rockin Motors AB",
+    "enabledProviders": [
+      "swish",
+      "nets",
+      "stripe"
+    ],
+    "primaryFinancing": "",
+    "credentials": {},
+    "updatedAt": "2026-03-10T13:41:14.122Z"
+  },
+  "stockholm-motors-ab": {
+    "dealerId": "stockholm-motors-ab",
+    "dealerName": "Stockholm Motors AB",
+    "enabledProviders": [
+      "svea",
+      "santander",
+      "resurs",
+      "klarna",
+      "qliro",
+      "swish",
+      "trustly",
+      "nets",
+      "stripe",
+      "bank_transfer"
+    ],
+    "primaryFinancing": "",
+    "credentials": {},
+    "updatedAt": "2026-03-10T15:00:54.683Z"
+  },
+  "malm-motors-ab": {
+    "dealerId": "malm-motors-ab",
+    "dealerName": "Malmö Motors AB",
+    "enabledProviders": [
+      "svea",
+      "santander",
+      "resurs",
+      "klarna",
+      "swish",
+      "nets",
+      "stripe",
+      "bank_transfer"
+    ],
+    "primaryFinancing": "",
+    "credentials": {},
+    "updatedAt": "2026-03-12T01:20:43.121Z"
+  }
+}
