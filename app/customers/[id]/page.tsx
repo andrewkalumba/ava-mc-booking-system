@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Link from 'next/link';
@@ -8,6 +8,10 @@ import { toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
 import { getDealerInfo } from '@/lib/dealer';
 import { getCustomerById, type Customer } from '@/lib/customers';
+import { getSupabaseBrowser } from '@/lib/supabase';
+import { getDealershipId } from '@/lib/tenant';
+import { useAutoRefresh } from '@/lib/realtime';
+import { getInvoicesByCustomer } from '@/lib/invoices';
 
 type ProfileTab = 'overview' | 'vehicles' | 'invoices' | 'documents' | 'timeline' | 'gdpr';
 type SourceBadge = 'BankID' | 'Folkbokföring' | 'Manuell';
@@ -127,20 +131,82 @@ export default function CustomerProfilePage() {
   const [tab, setTab] = useState<ProfileTab>('overview');
   const [dealerEmail, setDealerEmail] = useState('');
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [liveInvoices, setLiveInvoices]   = useState<any[]>([]);
+  const [liveTimeline, setLiveTimeline]   = useState<any[]>([]);
+
+  // Fetch real invoices (direct customer_id FK) + build timeline from leads+invoices
+  const loadLiveData = useCallback(async () => {
+    const dealershipId = getDealershipId();
+    const custId = parseInt(id);
+    if (isNaN(custId) || !dealershipId) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb = getSupabaseBrowser() as any;
+
+    // 1. Invoices directly linked to this customer (fast — uses customer_id FK index)
+    const invoices = await getInvoicesByCustomer(custId);
+    setLiveInvoices(invoices.map(inv => ({
+      id:     inv.id,
+      desc:   inv.vehicle ?? '—',
+      amount: inv.totalAmount,
+      date:   new Date(inv.issueDate).toLocaleDateString('sv-SE'),
+      status: inv.status === 'paid' ? 'Betald' : 'Väntande',
+    })));
+
+    // 2. Leads for this customer — needed for timeline events
+    const { data: leads } = await sb
+      .from('leads')
+      .select('id, bike, created_at, closed_at')
+      .eq('customer_id', custId)
+      .eq('dealership_id', dealershipId)
+      .order('created_at', { ascending: false });
+
+    // 3. Build chronological timeline
+    const events: { date: string; event: string; ts: number }[] = [];
+    for (const lead of (leads ?? [])) {
+      events.push({ ts: new Date(lead.created_at).getTime(), date: new Date(lead.created_at).toLocaleDateString('sv-SE'), event: `📋 Lead skapad — ${lead.bike}` });
+      if (lead.closed_at) events.push({ ts: new Date(lead.closed_at).getTime(), date: new Date(lead.closed_at).toLocaleDateString('sv-SE'), event: `✅ Köp genomfört — ${lead.bike}` });
+    }
+    for (const inv of invoices) {
+      events.push({ ts: new Date(inv.issueDate).getTime(), date: new Date(inv.issueDate).toLocaleDateString('sv-SE'), event: `🧾 Faktura skapad — ${inv.vehicle}: ${inv.totalAmount.toLocaleString('sv-SE')} kr` });
+      if (inv.paidDate) {
+        events.push({ ts: new Date(inv.paidDate).getTime(), date: new Date(inv.paidDate).toLocaleDateString('sv-SE'), event: `💳 Faktura betald — ${inv.vehicle}: ${inv.totalAmount.toLocaleString('sv-SE')} kr` });
+      }
+    }
+    events.sort((a, b) => b.ts - a.ts);
+    setLiveTimeline(events.map(e => ({ date: e.date, event: e.event })));
+  }, [id]);
 
   useEffect(() => {
     const user = localStorage.getItem('user');
     if (!user) { router.push('/auth/login'); return; }
     setDealerEmail(getDealerInfo().email);
     getCustomerById(parseInt(id)).then(c => { if (c) setCustomer(c); });
+    loadLiveData();
     setReady(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Re-fetch when any data changes on another device
+  useAutoRefresh(loadLiveData);
+
   const mockC = MOCK_DB[id];
   const c = customer
     ? {
-        ...mockC,
+        // Safe defaults — prevents crashes when mockC is undefined for non-demo customers
+        vehicles:      (mockC?.vehicles      ?? []) as any[],
+        bankidHistory: (mockC?.bankidHistory ?? []) as any[],
+        vehiclesOwned: mockC?.vehiclesOwned ?? '—',
+        outstanding:   mockC?.outstanding   ?? 0,
+        nps:           mockC?.nps           ?? '—',
+        citizenship:   mockC?.citizenship   ?? 'Svensk',
+        customerSince: mockC?.customerSince ?? '—',
+        lastBankID:    mockC?.lastBankID    ?? '—',
+        risk:          mockC?.risk          ?? 'Låg',
+        // Live Supabase data takes priority over mock
+        invoices:  liveInvoices.length > 0 ? liveInvoices : (mockC?.invoices ?? []),
+        timeline:  liveTimeline.length > 0 ? liveTimeline : (mockC?.timeline ?? []),
+        // Real customer fields always override
         id:                customer.id,
         firstName:         customer.firstName,
         lastName:          customer.lastName,
@@ -180,8 +246,8 @@ export default function CustomerProfilePage() {
 
   const PROFILE_TABS: { id: ProfileTab; label: string; count?: number }[] = [
     { id: 'overview',   label: t('profile.tabs.overview') },
-    { id: 'vehicles',   label: t('profile.tabs.vehicles'),  count: c.vehicles.length },
-    { id: 'invoices',   label: t('profile.tabs.invoices'),  count: c.invoices.length },
+    { id: 'vehicles',   label: t('profile.tabs.vehicles'),  count: c.vehicles?.length ?? 0 },
+    { id: 'invoices',   label: t('profile.tabs.invoices'),  count: c.invoices?.length  ?? 0 },
     { id: 'documents',  label: t('profile.tabs.documents') },
     { id: 'timeline',   label: t('profile.tabs.timeline') },
     { id: 'gdpr',       label: t('profile.tabs.gdpr') },
@@ -316,7 +382,7 @@ export default function CustomerProfilePage() {
                 {/* BankID history */}
                 <div className="bg-white rounded-2xl border border-slate-100 p-6">
                   <h2 className="text-sm font-bold text-slate-900 mb-4">{t('profile.bankidHistory')}</h2>
-                  {c.bankidHistory.length === 0 ? (
+                  {(c.bankidHistory?.length ?? 0) === 0 ? (
                     <p className="text-sm text-slate-400">{t('profile.noBankIDHistory')}</p>
                   ) : (
                     <div className="space-y-3">
@@ -331,7 +397,7 @@ export default function CustomerProfilePage() {
                           </span>
                         </div>
                       ))}
-                      {c.bankidHistory.length > 0 && (
+                      {(c.bankidHistory?.length ?? 0) > 0 && (
                         <p className="text-[11px] text-slate-400 mt-2">Signatur + OCSP lagrad för varje verifiering (rättsligt bevis)</p>
                       )}
                     </div>
@@ -359,11 +425,11 @@ export default function CustomerProfilePage() {
                 {/* Timeline */}
                 <div className="bg-white rounded-2xl border border-slate-100 p-6">
                   <h2 className="text-sm font-bold text-slate-900 mb-4">{t('profile.recentActivity')}</h2>
-                  {c.timeline.length === 0 ? (
+                  {(c.timeline?.length ?? 0) === 0 ? (
                     <p className="text-sm text-slate-400">{t('profile.noActivity')}</p>
                   ) : (
                     <div className="space-y-2.5">
-                      {c.timeline.map((t: any, i: number) => (
+                      {(c.timeline ?? []).map((t: any, i: number) => (
                         <div key={i} className="flex gap-3">
                           <span className="text-xs text-slate-400 w-20 shrink-0 pt-0.5">{t.date}</span>
                           <span className="text-sm text-slate-700">{t.event}</span>
@@ -390,7 +456,7 @@ export default function CustomerProfilePage() {
           {/* ── VEHICLES ── */}
           {tab === 'vehicles' && (
             <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-              {c.vehicles.length === 0 ? (
+              {(c.vehicles?.length ?? 0) === 0 ? (
                 <div className="py-16 text-center text-slate-400 text-sm">{t('profile.noVehicles')}</div>
               ) : (
                 <table className="w-full">
@@ -402,7 +468,7 @@ export default function CustomerProfilePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {c.vehicles.map((v: any, i: number) => (
+                    {(c.vehicles ?? []).map((v: any, i: number) => (
                       <tr key={i} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 text-sm font-semibold text-slate-900">🏍 {v.name}</td>
                         <td className="px-6 py-4 text-sm text-slate-600">{v.year}</td>
@@ -423,7 +489,7 @@ export default function CustomerProfilePage() {
           {/* ── INVOICES ── */}
           {tab === 'invoices' && (
             <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden">
-              {c.invoices.length === 0 ? (
+              {(c.invoices?.length ?? 0) === 0 ? (
                 <div className="py-16 text-center text-slate-400 text-sm">{t('profile.noInvoices')}</div>
               ) : (
                 <table className="w-full">
@@ -435,7 +501,7 @@ export default function CustomerProfilePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {c.invoices.map((inv: any, i: number) => (
+                    {(c.invoices ?? []).map((inv: any, i: number) => (
                       <tr key={i} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 text-xs font-mono text-slate-500">{inv.id}</td>
                         <td className="px-6 py-4 text-sm text-slate-900">{inv.desc}</td>
@@ -455,13 +521,13 @@ export default function CustomerProfilePage() {
           {/* ── TIMELINE ── */}
           {tab === 'timeline' && (
             <div className="bg-white rounded-2xl border border-slate-100 p-6 max-w-2xl">
-              {c.timeline.length === 0 ? (
+              {(c.timeline?.length ?? 0) === 0 ? (
                 <p className="text-sm text-slate-400">{t('profile.noActivity')}</p>
               ) : (
                 <div className="relative">
                   <div className="absolute left-4 top-0 bottom-0 w-px bg-slate-100" />
                   <div className="space-y-4">
-                    {c.timeline.map((t: any, i: number) => (
+                    {(c.timeline ?? []).map((t: any, i: number) => (
                       <div key={i} className="flex gap-4 pl-10 relative">
                         <div className="absolute left-3 top-1.5 w-2.5 h-2.5 rounded-full bg-[#FF6B2C] border-2 border-white" />
                         <div>
@@ -501,8 +567,8 @@ export default function CustomerProfilePage() {
                         { label: t('profile.gdprTab.name'),    src: t('profile.gdprTab.sourceBankID'),  ok: !!c.personnummer },
                         { label: t('profile.gdprTab.address'), src: t('profile.gdprTab.sourceSPAR'),    ok: !!c.address },
                         { label: t('profile.gdprTab.contact'), src: t('profile.gdprTab.sourceManual'),  ok: !!c.email },
-                        { label: t('profile.gdprTab.purchases', { n: c.invoices.length }),   src: 'System',                          ok: c.invoices.length > 0 },
-                        { label: t('profile.gdprTab.bankidLogs', { n: c.bankidHistory.length }), src: t('profile.gdprTab.sourceBankID'), ok: c.bankidHistory.length > 0 },
+                        { label: t('profile.gdprTab.purchases', { n: c.invoices?.length ?? 0 }),   src: 'System',                          ok: (c.invoices?.length ?? 0) > 0 },
+                        { label: t('profile.gdprTab.bankidLogs', { n: c.bankidHistory?.length ?? 0 }), src: t('profile.gdprTab.sourceBankID'), ok: (c.bankidHistory?.length ?? 0) > 0 },
                       ].map(row => (
                         <div key={row.label} className="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
                           <span className="text-sm text-slate-700">{row.label}</span>
@@ -551,8 +617,8 @@ export default function CustomerProfilePage() {
                           phone: c.phone,
                           birthDate: c.birthDate,
                           gender: c.gender,
-                          invoices: c.invoices,
-                          bankidHistory: c.bankidHistory,
+                          invoices: c.invoices ?? [],
+                          bankidHistory: c.bankidHistory ?? [],
                           exportedAt: new Date().toISOString(),
                         };
                         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });

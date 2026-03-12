@@ -67,7 +67,7 @@ export default function AgreementPreviewPage() {
   const [dealer, setDealer] = useState({ name: '', orgNr: '', city: '', email: '' });
   const [buyerName, setBuyerName] = useState(MOCK_AGREEMENT.buyerName);
   const [personnummer, setPersonnummer] = useState(MOCK_AGREEMENT.personnummer);
-  const [buyerAddress, setBuyerAddress] = useState(MOCK_AGREEMENT.buyerAddress);
+  const [buyerAddress, setBuyerAddress] = useState('');
 
   useEffect(() => {
     const raw = localStorage.getItem('user');

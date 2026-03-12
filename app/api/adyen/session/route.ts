@@ -18,8 +18,7 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await createPaymentSession({
-      amount,
-      currency:    currency ?? 'SEK',
+      amount:      { currency: currency ?? 'SEK', value: amount },
       reference,
       returnUrl,
       countryCode: countryCode ?? 'SE',

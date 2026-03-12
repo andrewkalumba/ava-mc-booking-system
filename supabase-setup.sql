@@ -539,3 +539,226 @@ CREATE TABLE IF NOT EXISTS dealership_settings (
 
 -- Enable Realtime so profile changes on one device propagate to all others
 ALTER PUBLICATION supabase_realtime ADD TABLE dealership_settings;
+
+-- ============================================
+-- ACTIVE APP TABLES
+-- ============================================
+-- These are the tables the Next.js application reads/writes.
+-- Run this section after the dealership_settings table above.
+
+-- ── customers ──────────────────────────────────────────────────────────────────
+-- One row per customer per dealership. Populated via BankID, SPAR, or manual entry.
+CREATE TABLE IF NOT EXISTS customers (
+  id                 BIGSERIAL     PRIMARY KEY,
+  first_name         TEXT          NOT NULL,
+  last_name          TEXT          NOT NULL,
+  personnummer       TEXT,
+  email              TEXT,
+  phone              TEXT,
+  address            TEXT,
+  city               TEXT,
+  source             TEXT          NOT NULL DEFAULT 'Manual', -- 'BankID' | 'Manual' | 'SPAR'
+  lifetime_value     NUMERIC(12,2) NOT NULL DEFAULT 0,
+  last_activity      TIMESTAMPTZ            DEFAULT NOW(),
+  tag                TEXT          NOT NULL DEFAULT 'New',   -- 'VIP' | 'Active' | 'New' | 'Inactive'
+  bankid_verified    BOOLEAN       NOT NULL DEFAULT FALSE,
+  protected_identity BOOLEAN       NOT NULL DEFAULT FALSE,
+  gender             TEXT,
+  birth_date         TEXT,
+  dealership_id      UUID          NOT NULL REFERENCES dealership_settings(dealership_id) ON DELETE CASCADE,
+  created_at         TIMESTAMPTZ            DEFAULT NOW(),
+  updated_at         TIMESTAMPTZ            DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS customers_pnr_dealer_uidx ON customers(personnummer, dealership_id)
+  WHERE personnummer IS NOT NULL;
+CREATE INDEX IF NOT EXISTS customers_dealership_idx ON customers(dealership_id);
+CREATE INDEX IF NOT EXISTS customers_email_dealer_idx ON customers(email, dealership_id);
+CREATE INDEX IF NOT EXISTS customers_tag_idx ON customers(tag, dealership_id);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE customers;
+
+-- ── leads ──────────────────────────────────────────────────────────────────────
+-- Sales pipeline leads. Converted to customers once the deal closes.
+CREATE TABLE IF NOT EXISTS leads (
+  id            BIGSERIAL     PRIMARY KEY,
+  name          TEXT          NOT NULL,
+  bike          TEXT          NOT NULL,
+  value         NUMERIC(12,2)          DEFAULT 0,
+  email         TEXT,
+  phone         TEXT,
+  personnummer  TEXT,
+  lead_status   TEXT          NOT NULL DEFAULT 'warm',        -- 'hot' | 'warm' | 'cold'
+  stage         TEXT          NOT NULL DEFAULT 'new',         -- 'new' | 'contacted' | 'testride' | 'negotiating' | 'closed'
+  source        TEXT                   DEFAULT 'Manual',
+  notes         TEXT,
+  address       TEXT,
+  city          TEXT,
+  customer_id   BIGINT                 REFERENCES customers(id) ON DELETE SET NULL,
+  closed_at     TIMESTAMPTZ,
+  dealership_id UUID          NOT NULL REFERENCES dealership_settings(dealership_id) ON DELETE CASCADE,
+  created_at    TIMESTAMPTZ            DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS leads_dealership_idx ON leads(dealership_id);
+CREATE INDEX IF NOT EXISTS leads_customer_idx   ON leads(customer_id);
+CREATE INDEX IF NOT EXISTS leads_stage_idx      ON leads(stage, dealership_id);
+CREATE INDEX IF NOT EXISTS leads_created_at_idx ON leads(created_at DESC);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE leads;
+
+-- ── invoices ───────────────────────────────────────────────────────────────────
+-- One invoice per paid deal. Linked to both the lead and the resulting customer.
+CREATE TABLE IF NOT EXISTS invoices (
+  id             TEXT          PRIMARY KEY,  -- INV-YYYY-NNN
+  lead_id        BIGINT                 REFERENCES leads(id)     ON DELETE SET NULL,
+  customer_id    BIGINT                 REFERENCES customers(id) ON DELETE SET NULL,
+  customer_name  TEXT          NOT NULL,
+  vehicle        TEXT          NOT NULL,
+  agreement_ref  TEXT,
+  total_amount   NUMERIC(12,2) NOT NULL,
+  vat_amount     NUMERIC(12,2) NOT NULL,
+  net_amount     NUMERIC(12,2) NOT NULL,
+  payment_method TEXT                   DEFAULT '',
+  status         TEXT          NOT NULL DEFAULT 'pending',  -- 'paid' | 'pending'
+  issue_date     TIMESTAMPTZ            DEFAULT NOW(),
+  paid_date      TIMESTAMPTZ,
+  dealership_id  UUID          NOT NULL REFERENCES dealership_settings(dealership_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS invoices_dealership_idx ON invoices(dealership_id);
+CREATE INDEX IF NOT EXISTS invoices_lead_idx       ON invoices(lead_id);
+CREATE INDEX IF NOT EXISTS invoices_customer_idx   ON invoices(customer_id);
+CREATE INDEX IF NOT EXISTS invoices_status_idx     ON invoices(status, dealership_id);
+CREATE INDEX IF NOT EXISTS invoices_issue_date_idx ON invoices(issue_date DESC);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE invoices;
+
+-- ── motorcycles ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS motorcycles (
+  id             TEXT          PRIMARY KEY,  -- MC-XXXX
+  name           TEXT          NOT NULL,
+  article_number TEXT,
+  brand          TEXT,
+  vin            TEXT,
+  year           INTEGER,
+  engine_cc      INTEGER,
+  color          TEXT,
+  mc_type        TEXT,
+  warehouse      TEXT,
+  stock          INTEGER                DEFAULT 0,
+  reorder_qty    INTEGER                DEFAULT 2,
+  cost           NUMERIC(12,2)          DEFAULT 0,
+  selling_price  NUMERIC(12,2)          DEFAULT 0,
+  vendor         TEXT,
+  description    TEXT,
+  dealership_id  UUID          NOT NULL REFERENCES dealership_settings(dealership_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS motorcycles_dealership_idx ON motorcycles(dealership_id);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE motorcycles;
+
+-- ── spare_parts ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS spare_parts (
+  id             TEXT          PRIMARY KEY,  -- SP-XXXX
+  name           TEXT          NOT NULL,
+  article_number TEXT,
+  brand          TEXT,
+  category       TEXT,
+  stock          INTEGER                DEFAULT 0,
+  reorder_qty    INTEGER                DEFAULT 5,
+  cost           NUMERIC(12,2)          DEFAULT 0,
+  selling_price  NUMERIC(12,2)          DEFAULT 0,
+  vendor         TEXT,
+  description    TEXT,
+  dealership_id  UUID          NOT NULL REFERENCES dealership_settings(dealership_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS spare_parts_dealership_idx ON spare_parts(dealership_id);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE spare_parts;
+
+-- ── accessories ────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS accessories (
+  id             TEXT          PRIMARY KEY,  -- ACC-XXXX
+  name           TEXT          NOT NULL,
+  article_number TEXT,
+  brand          TEXT,
+  category       TEXT,
+  size           TEXT,          -- optional: XS | S | M | L | XL | XXL | One Size
+  stock          INTEGER                DEFAULT 0,
+  reorder_qty    INTEGER                DEFAULT 5,
+  cost           NUMERIC(12,2)          DEFAULT 0,
+  selling_price  NUMERIC(12,2)          DEFAULT 0,
+  vendor         TEXT,
+  description    TEXT,
+  dealership_id  UUID          NOT NULL REFERENCES dealership_settings(dealership_id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS accessories_dealership_idx ON accessories(dealership_id);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE accessories;
+
+-- ── staff_users ────────────────────────────────────────────────────────────────
+-- Staff accounts per dealership. Pending = invited but not yet accepted.
+CREATE TABLE IF NOT EXISTS staff_users (
+  id              UUID          PRIMARY KEY DEFAULT gen_random_uuid(),
+  name            TEXT          NOT NULL,
+  email           TEXT          NOT NULL,
+  role            TEXT          NOT NULL DEFAULT 'sales',    -- 'admin' | 'sales' | 'service'
+  status          TEXT          NOT NULL DEFAULT 'pending',  -- 'active' | 'inactive' | 'pending'
+  last_login      TIMESTAMPTZ,
+  bankid_verified BOOLEAN                  DEFAULT FALSE,
+  personal_number TEXT,
+  dealership_id   UUID          NOT NULL REFERENCES dealership_settings(dealership_id) ON DELETE CASCADE,
+  created_at      TIMESTAMPTZ              DEFAULT NOW(),
+  UNIQUE (email, dealership_id)
+);
+
+CREATE INDEX IF NOT EXISTS staff_users_dealership_idx ON staff_users(dealership_id);
+CREATE INDEX IF NOT EXISTS staff_users_email_idx      ON staff_users(email);
+
+ALTER PUBLICATION supabase_realtime ADD TABLE staff_users;
+
+-- ============================================
+-- ROW LEVEL SECURITY (RLS) POLICIES
+-- ============================================
+-- Enable RLS on all tenant-scoped tables so users can only access their own data.
+-- The dealership_id in the JWT custom claim must match the row's dealership_id.
+
+ALTER TABLE customers     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE leads         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoices      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE motorcycles   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE spare_parts   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE accessories   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staff_users   ENABLE ROW LEVEL SECURITY;
+
+-- Service-role key bypasses RLS (used by server-side API routes).
+-- Anon / authenticated key is restricted by the policies below.
+
+CREATE POLICY "Tenant isolation — customers"   ON customers   FOR ALL USING (dealership_id = auth.uid());
+CREATE POLICY "Tenant isolation — leads"       ON leads       FOR ALL USING (dealership_id = auth.uid());
+CREATE POLICY "Tenant isolation — invoices"    ON invoices    FOR ALL USING (dealership_id = auth.uid());
+CREATE POLICY "Tenant isolation — motorcycles" ON motorcycles FOR ALL USING (dealership_id = auth.uid());
+CREATE POLICY "Tenant isolation — spare_parts" ON spare_parts FOR ALL USING (dealership_id = auth.uid());
+CREATE POLICY "Tenant isolation — accessories" ON accessories FOR ALL USING (dealership_id = auth.uid());
+CREATE POLICY "Tenant isolation — staff_users" ON staff_users FOR ALL USING (dealership_id = auth.uid());
+
+-- ============================================
+-- RELATIONSHIP DIAGRAM (for reference)
+-- ============================================
+--
+--  dealership_settings (1)
+--    ├── customers          (N)  ← created by BankID/SPAR/manual
+--    │     └── invoices     (N)  ← direct FK: invoices.customer_id
+--    ├── leads              (N)  ← sales pipeline
+--    │     ├── invoices     (N)  ← leads.id → invoices.lead_id
+--    │     └── customers    (1)  ← leads.customer_id (set on close)
+--    ├── motorcycles        (N)  ← inventory
+--    ├── spare_parts        (N)  ← inventory
+--    ├── accessories        (N)  ← inventory
+--    ├── staff_users        (N)  ← team members
+--    ├── webhook_events     (N)  ← payment callbacks
+--    └── dealership_settings(1) ← profile/branding

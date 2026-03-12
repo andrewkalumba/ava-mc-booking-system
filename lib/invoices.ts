@@ -5,6 +5,7 @@ import { getDealershipId } from './tenant';
 export interface Invoice {
   id:            string;   // INV-YYYY-NNN
   leadId:        string;   // URL param id of the originating lead
+  customerId?:   number;   // FK → customers.id  (set when lead converts to customer)
   customerName:  string;
   vehicle:       string;
   agreementRef:  string;   // AGR-YYYY-NNNN
@@ -26,6 +27,7 @@ function mapDbToInvoice(row: Record<string, unknown>): Invoice {
   return {
     id:            row.id            as string,
     leadId:        String(row.lead_id ?? ''),
+    customerId:    row.customer_id != null ? Number(row.customer_id) : undefined,
     customerName:  (row.customer_name  as string) ?? '',
     vehicle:       (row.vehicle        as string) ?? '',
     agreementRef:  (row.agreement_ref  as string) ?? '',
@@ -42,6 +44,7 @@ function mapDbToInvoice(row: Record<string, unknown>): Invoice {
 function mapInvoiceToDb(inv: Omit<Invoice, 'id' | 'issueDate'>): Record<string, unknown> {
   return {
     lead_id:        inv.leadId       || null,
+    customer_id:    inv.customerId   ?? null,
     customer_name:  inv.customerName,
     vehicle:        inv.vehicle,
     agreement_ref:  inv.agreementRef || null,
@@ -81,6 +84,20 @@ export async function getInvoices(): Promise<Invoice[]> {
     .eq('dealership_id', dealershipId)
     .order('issue_date', { ascending: false });
   if (error) { console.error('[invoices] getInvoices:', error.message); return []; }
+  return (data ?? []).map((r: Record<string, unknown>) => mapDbToInvoice(r));
+}
+
+/** Fetch all invoices for a specific customer (by customer_id FK). */
+export async function getInvoicesByCustomer(customerId: number): Promise<Invoice[]> {
+  const dealershipId = getDealershipId();
+  if (!dealershipId) return [];
+  const { data, error } = await db()
+    .from('invoices')
+    .select('*')
+    .eq('customer_id', customerId)
+    .eq('dealership_id', dealershipId)
+    .order('issue_date', { ascending: false });
+  if (error) { console.error('[invoices] getInvoicesByCustomer:', error.message); return []; }
   return (data ?? []).map((r: Record<string, unknown>) => mapDbToInvoice(r));
 }
 

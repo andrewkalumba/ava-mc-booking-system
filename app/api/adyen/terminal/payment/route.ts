@@ -16,7 +16,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await initiateTerminalPayment({ terminalId, serviceId, amount, currency: currency ?? 'SEK' });
+    const result = await initiateTerminalPayment({
+      amount:    { currency: currency ?? 'SEK', value: amount },
+      reference: serviceId,
+    });
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('[Adyen terminal payment]', error.message);

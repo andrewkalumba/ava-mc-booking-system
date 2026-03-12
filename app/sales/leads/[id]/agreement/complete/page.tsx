@@ -9,6 +9,8 @@ import { getDealerInfo } from '@/lib/dealer';
 import { convertLeadToCustomer } from '@/lib/leads';
 import { emit } from '@/lib/realtime';
 import { toast } from 'sonner';
+import { getSupabaseBrowser } from '@/lib/supabase';
+import { getDealershipId } from '@/lib/tenant';
 
 interface SelectedPayment {
   id:       string;
@@ -61,6 +63,9 @@ export default function AgreementCompletePage() {
   const [sellerName, setSellerName]     = useState('');
   const [sellerOrgNr, setSellerOrgNr]   = useState('');
   const [sellerCity, setSellerCity]     = useState('');
+  const [buyerName, setBuyerName]       = useState('');
+  const [buyerBike, setBuyerBike]       = useState('');
+  const [buyerValue, setBuyerValue]     = useState('');
 
   useEffect(() => {
     const user = localStorage.getItem('user');
@@ -85,6 +90,39 @@ export default function AgreementCompletePage() {
       if (sig) setSignatures(sig);
     } catch {
       // ignore parse errors
+    }
+
+    // Fetch live buyer info from Supabase
+    const leadId       = Number(id);
+    const dealershipId = getDealershipId();
+    if (!Number.isNaN(leadId) && dealershipId) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (getSupabaseBrowser() as any)
+        .from('leads')
+        .select('name, bike, value, customer_id')
+        .eq('id', leadId)
+        .eq('dealership_id', dealershipId)
+        .maybeSingle()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then(async ({ data: lead }: any) => {
+          if (!lead) return;
+          let name = (lead.name as string) ?? '';
+          // Use canonical name from customers table if lead has been converted
+          if (lead.customer_id) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: cust } = await (getSupabaseBrowser() as any)
+              .from('customers')
+              .select('first_name, last_name')
+              .eq('id', lead.customer_id)
+              .eq('dealership_id', dealershipId)
+              .maybeSingle();
+            if (cust) name = `${cust.first_name} ${cust.last_name}`.trim();
+          }
+          setBuyerName(name);
+          setBuyerBike((lead.bike as string) ?? '');
+          const val = parseFloat(lead.value ?? '0');
+          setBuyerValue(val > 0 ? `${val.toLocaleString('sv-SE')} kr` : '');
+        });
     }
 
     setReady(true);
@@ -172,7 +210,7 @@ export default function AgreementCompletePage() {
           <hr style={{ margin: '16px 0', borderColor: '#e2e8f0' }} />
           {[
             { label: 'SÄLJARE',       value: `${sellerName}${sellerCity ? ', ' + sellerCity : ''}` },
-            { label: 'KÖPARE',        value: 'Lars Bergman, Sveavägen 42, Stockholm' },
+            { label: 'KÖPARE',        value: buyerName || '—' },
             { label: 'FORDON',        value: 'Kawasaki Ninja ZX-6R 2024, VIN: JKBZXR636PA012345' },
             { label: 'TILLBEHÖR',     value: 'Akrapovic, Tank Pad, Crash Protectors (15 280 kr)' },
             { label: 'INBYTE',        value: 'Kawasaki Ninja 300 2020 — Inbytesvärde: 32 000 kr' },
@@ -266,7 +304,7 @@ export default function AgreementCompletePage() {
             <div>
               <h1 className="text-lg font-bold text-green-800">{t('complete.successTitle')}</h1>
               <p className="text-sm text-green-600 mt-0.5">
-                AGR-2024-0089 • Lars Bergman + AVA MC • Ninja ZX-6R • 133,280 kr
+                {[buyerName, sellerName, buyerBike, buyerValue].filter(Boolean).join(' • ')}
                 {paymentMethod && (
                   <> • {paymentMethod.icon} <strong>{paymentMethod.name}</strong></>
                 )}
