@@ -1,15 +1,17 @@
 
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import Sidebar from '@/components/Sidebar';
 import Link from 'next/link';
 import { getCustomers } from '@/lib/customers';
 import { getInvoices, type Invoice } from '@/lib/invoices';
-import { getLeads } from '@/lib/leads';
+import { getLeads, type Lead } from '@/lib/leads';
 import { useAutoRefresh } from '@/lib/realtime';
+import { getSupabaseBrowser } from '@/lib/supabase';
+import { getDealershipId } from '@/lib/tenant';
 
 // ── Count-up hook ──────────────────────────────────────
 function useCountUp(target: number, duration = 1200, delay = 0) {
@@ -161,13 +163,25 @@ function buildRevenueData(invoices: Invoice[]) {
       .reduce((sum, inv) => sum + inv.totalAmount, 0);
     months.push({ label, value: Math.round(value / 1000), highlight: i === 0 });
   }
-  // Ensure bars are never all-zero (show seed data scale if real data is empty)
   const max = Math.max(...months.map(m => m.value));
   if (max === 0) {
     const defaults = [720, 890, 670, 1050, 980, 1200];
     return months.map((m, i) => ({ ...m, value: defaults[i] }));
   }
   return months;
+}
+
+// ── Monthly bucket helper — count rows per month for last 6 months ────────────
+function buildMonthlyBuckets(rows: { created_at: string }[]): number[] {
+  const now = new Date();
+  return Array.from({ length: 6 }, (_, i) => {
+    const monthStart = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const monthEnd   = new Date(now.getFullYear(), now.getMonth() - (5 - i) + 1, 1);
+    return rows.filter(r => {
+      const t = new Date(r.created_at);
+      return t >= monthStart && t < monthEnd;
+    }).length;
+  });
 }
 
 // ── Page ───────────────────────────────────────────────
@@ -179,24 +193,144 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null);
 
   // ── Live stats ─────────────────────────────────────────────────────────────
-  const [liveCustomers, setLiveCustomers] = useState(0);
-  const [liveRevenue,   setLiveRevenue]   = useState(0);
-  const [liveLeads,     setLiveLeads]     = useState(0);
-  const [revenueData,   setRevenueData]   = useState(() => buildRevenueData([]));
+  const [liveCustomers,    setLiveCustomers]    = useState(0);
+  const [liveRevenue,      setLiveRevenue]      = useState(0);
+  const [liveLeads,        setLiveLeads]        = useState(0);
+  const [liveVehicles,     setLiveVehicles]     = useState(0);
+  const [revenueData,      setRevenueData]      = useState(() => buildRevenueData([]));
+  const [liveRecentLeads,  setLiveRecentLeads]  = useState<Lead[]>([]);
+  const [liveFunnel,       setLiveFunnel]       = useState({ new: 0, contacted: 0, testride: 0, negotiating: 0, closed: 0 });
+  const [liveTopBikes,     setLiveTopBikes]     = useState<{ name: string; sales: number; rev: string }[]>([]);
+  const [trends,           setTrends]           = useState({
+    leads:     [0, 0, 0, 0, 0, 0],
+    vehicles:  [0, 0, 0, 0, 0, 0],
+    revenue:   [720, 890, 670, 1050, 980, 1200],
+    customers: [0, 0, 0, 0, 0, 0],
+  });
+  const [changes, setChanges] = useState({
+    leads:     '—',
+    vehicles:  '—',
+    revenue:   '—',
+    customers: '—',
+  });
 
   const loadStats = async () => {
-    const invoices = await getInvoices();
-    const paidTotal = invoices
-      .filter(inv => inv.status === 'paid')
-      .reduce((s, inv) => s + inv.totalAmount, 0);
-    setLiveRevenue(Math.round(paidTotal / 1000));
-    setRevenueData(buildRevenueData(invoices));
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb = getSupabaseBrowser() as any;
+    const dealershipId = getDealershipId();
+    const now = new Date();
+    const sixMonthsAgo   = new Date(now.getFullYear(), now.getMonth() - 5, 1).toISOString();
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
+    // ── Invoices ────────────────────────────────────────
+    const invoices   = await getInvoices();
+    const paidInvoices = invoices.filter(inv => inv.status === 'paid');
+    const paidTotal  = paidInvoices.reduce((s, inv) => s + inv.totalAmount, 0);
+    setLiveRevenue(Math.round(paidTotal / 1000));
+    const revData = buildRevenueData(invoices);
+    setRevenueData(revData);
+
+    // ── Customers ───────────────────────────────────────
     const allCustomers = await getCustomers();
     setLiveCustomers(allCustomers.length);
 
+    // ── Leads ───────────────────────────────────────────
     const leads = await getLeads();
     setLiveLeads(leads.length);
+    setLiveRecentLeads(leads.slice(0, 4));
+
+    const funnelCounts = { new: 0, contacted: 0, testride: 0, negotiating: 0, closed: 0 };
+    leads.forEach(l => {
+      if (l.stage in funnelCounts) funnelCounts[l.stage as keyof typeof funnelCounts]++;
+    });
+    setLiveFunnel(funnelCounts);
+
+    // ── Top bikes from paid invoices ─────────────────────
+    const bikeMap = new Map<string, { sales: number; revenue: number }>();
+    paidInvoices.forEach(inv => {
+      if (!inv.vehicle) return;
+      const cur = bikeMap.get(inv.vehicle) ?? { sales: 0, revenue: 0 };
+      bikeMap.set(inv.vehicle, { sales: cur.sales + 1, revenue: cur.revenue + inv.totalAmount });
+    });
+    const topBikesLive = [...bikeMap.entries()]
+      .sort((a, b) => b[1].sales - a[1].sales)
+      .slice(0, 4)
+      .map(([name, { sales, revenue }]) => ({
+        name,
+        sales,
+        rev: revenue >= 1_000_000
+          ? `${(revenue / 1_000_000).toFixed(1)}M kr`
+          : `${Math.round(revenue / 1000)}k kr`,
+      }));
+    setLiveTopBikes(topBikesLive);
+
+    if (!dealershipId) return;
+
+    // ── Motorcycles in stock ─────────────────────────────
+    const { data: mcs } = await sb
+      .from('motorcycles')
+      .select('stock, created_at')
+      .eq('dealership_id', dealershipId);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const totalStock = (mcs ?? []).reduce((s: number, r: any) => s + (r.stock ?? 0), 0);
+    setLiveVehicles(totalStock);
+
+    // ── Monthly trend data for sparklines ────────────────
+    const { data: leadsRaw } = await sb
+      .from('leads')
+      .select('created_at')
+      .eq('dealership_id', dealershipId)
+      .gte('created_at', sixMonthsAgo);
+
+    const { data: customersRaw } = await sb
+      .from('customers')
+      .select('created_at')
+      .eq('dealership_id', dealershipId)
+      .gte('created_at', sixMonthsAgo);
+
+    const trendLeads     = buildMonthlyBuckets(leadsRaw     ?? []);
+    const trendCustomers = buildMonthlyBuckets(customersRaw ?? []);
+    const trendRevenue   = revData.map(m => m.value);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const trendVehicles  = buildMonthlyBuckets((mcs ?? []).filter((r: any) => r.created_at));
+
+    setTrends({
+      leads:     trendLeads.some(v => v > 0)     ? trendLeads     : [0, 0, 0, 0, 0, leads.length],
+      vehicles:  trendVehicles.some(v => v > 0)  ? trendVehicles  : [0, 0, 0, 0, 0, totalStock],
+      revenue:   trendRevenue,
+      customers: trendCustomers.some(v => v > 0) ? trendCustomers : [0, 0, 0, 0, 0, allCustomers.length],
+    });
+
+    // ── Change badges ─────────────────────────────────────
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const leadsThis = (leadsRaw ?? []).filter((r: any) => new Date(r.created_at) >= thisMonthStart).length;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const leadsLast = (leadsRaw ?? []).filter((r: any) => {
+      const t = new Date(r.created_at);
+      return t >= lastMonthStart && t < thisMonthStart;
+    }).length;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const customersThis = (customersRaw ?? []).filter((r: any) => new Date(r.created_at) >= thisMonthStart).length;
+
+    const revenueThis = revData[5]?.value ?? 0;
+    const revenueLast = revData[4]?.value ?? 0;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const vehiclesNew = (mcs ?? []).filter((r: any) =>
+      r.created_at && new Date(r.created_at) >= thisMonthStart
+    ).length;
+
+    const pctChange = (a: number, b: number) =>
+      b === 0 ? (a > 0 ? `+${a} new` : '—') : `${a >= b ? '+' : ''}${Math.round(((a - b) / b) * 100)}%`;
+
+    setChanges({
+      leads:     leadsThis > 0 ? `+${leadsThis} this month` : (leadsLast > 0 ? `${pctChange(leadsThis, leadsLast)}` : `${leads.length} total`),
+      vehicles:  vehiclesNew > 0 ? `+${vehiclesNew} new` : `${totalStock} in stock`,
+      revenue:   pctChange(revenueThis, revenueLast),
+      customers: customersThis > 0 ? `+${customersThis} this month` : `${allCustomers.length} total`,
+    });
   };
 
   useEffect(() => {
@@ -225,23 +359,9 @@ export default function DashboardPage() {
   useAutoRefresh(loadStats);
 
   const leads     = useCountUp(liveLeads,     1000, 100);
-  const vehicles  = useCountUp(47,            1100, 200);
+  const vehicles  = useCountUp(liveVehicles,  1100, 200);
   const revenue   = useCountUp(liveRevenue,   1300, 300);
   const customers = useCountUp(liveCustomers, 1200, 400);
-
-  const recentLeads = [
-    { name: 'Lars Andersson', bike: 'Ninja ZX-6R', time: '2h ago', status: 'hot',  verified: true },
-    { name: 'Maria Svensson', bike: 'MT-07',        time: '5h ago', status: 'warm', verified: true },
-    { name: 'Erik Johansson', bike: 'CB650R',       time: '1d ago', status: 'warm', verified: false },
-    { name: 'Anna Lindgren',  bike: 'Duke 390',     time: '2d ago', status: 'cold', verified: false },
-  ];
-
-  const topBikes = [
-    { name: 'Kawasaki Ninja ZX-6R', sales: 12, rev: '1.8M kr' },
-    { name: 'Yamaha MT-07',          sales: 9,  rev: '810k kr'  },
-    { name: 'Honda CB650R',          sales: 7,  rev: '735k kr'  },
-    { name: 'KTM Duke 390',          sales: 5,  rev: '435k kr'  },
-  ];
 
   if (!user) return (
     <div className="flex items-center justify-center min-h-screen bg-[#f5f7fa]">
@@ -253,6 +373,7 @@ export default function DashboardPage() {
   );
 
   const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  const funnelTotal = liveLeads || 1;
 
   return (
     <div className="flex min-h-screen bg-[#f5f7fa]">
@@ -407,10 +528,10 @@ export default function DashboardPage() {
           {/* Stats */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 stagger">
             {[
-              { icon: '💰', label: t('stats.activeLeads'), value: leads,     suffix: '',  change: '+12%',    color: '#FF6B2C', trend: [14,18,15,22,20,24] },
-              { icon: '🏍', label: t('stats.inStock'),      value: vehicles,  suffix: '',  change: '8 new',   color: '#3b82f6', trend: [35,40,38,44,45,47] },
-              { icon: '📊', label: t('stats.revenueKr'),    value: revenue,   suffix: 'k', change: '+9%',     color: '#10b981', trend: [720,890,670,1050,980,1200] },
-              { icon: '👥', label: t('stats.customers'),    value: customers, suffix: '',  change: '+5 today',color: '#8b5cf6', trend: [120,130,135,140,150,156] },
+              { icon: '💰', label: t('stats.activeLeads'), value: leads,     suffix: '',  change: changes.leads,     color: '#FF6B2C', trend: trends.leads     },
+              { icon: '🏍', label: t('stats.inStock'),      value: vehicles,  suffix: '',  change: changes.vehicles,  color: '#3b82f6', trend: trends.vehicles  },
+              { icon: '📊', label: t('stats.revenueKr'),    value: revenue,   suffix: 'k', change: changes.revenue,   color: '#10b981', trend: trends.revenue   },
+              { icon: '👥', label: t('stats.customers'),    value: customers, suffix: '',  change: changes.customers, color: '#8b5cf6', trend: trends.customers },
             ].map((s, i) => (
               <div key={i} className="bg-white rounded-2xl border border-slate-100 p-5 flex flex-col gap-3 animate-fade-up hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between">
@@ -448,11 +569,11 @@ export default function DashboardPage() {
               <h2 className="font-bold text-slate-900 mb-0.5">{t('salesFunnel')}</h2>
               <p className="text-xs text-slate-400 mb-5">{t('salesFunnelSub')}</p>
               <div className="space-y-4">
-                <FunnelRow label={t('funnelStages.new')}         count={8} total={24} color="#FF6B2C" />
-                <FunnelRow label={t('funnelStages.contacted')}   count={6} total={24} color="#f59e0b" />
-                <FunnelRow label={t('funnelStages.testRide')}    count={5} total={24} color="#8b5cf6" />
-                <FunnelRow label={t('funnelStages.negotiating')} count={3} total={24} color="#3b82f6" />
-                <FunnelRow label={t('funnelStages.closed')}      count={2} total={24} color="#10b981" />
+                <FunnelRow label={t('funnelStages.new')}         count={liveFunnel.new}         total={funnelTotal} color="#FF6B2C" />
+                <FunnelRow label={t('funnelStages.contacted')}   count={liveFunnel.contacted}   total={funnelTotal} color="#f59e0b" />
+                <FunnelRow label={t('funnelStages.testRide')}    count={liveFunnel.testride}    total={funnelTotal} color="#8b5cf6" />
+                <FunnelRow label={t('funnelStages.negotiating')} count={liveFunnel.negotiating} total={funnelTotal} color="#3b82f6" />
+                <FunnelRow label={t('funnelStages.closed')}      count={liveFunnel.closed}      total={funnelTotal} color="#10b981" />
               </div>
               {user?.role !== 'service' && (
                 <Link href="/sales/leads" className="mt-5 flex items-center gap-1 text-xs text-[#FF6B2C] font-semibold hover:underline">
@@ -485,11 +606,14 @@ export default function DashboardPage() {
                 )}
               </div>
               <div className="space-y-1">
-                {recentLeads.map((lead, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer">
+                {liveRecentLeads.length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-6">No leads yet.</p>
+                ) : liveRecentLeads.map((lead, i) => (
+                  <Link key={i} href={`/sales/leads/${lead.id}`}
+                    className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-full bg-[#0f1729] flex items-center justify-center text-xs font-bold text-white shrink-0">
-                        {lead.name[0]}
+                        {lead.initials}
                       </div>
                       <div>
                         <div className="flex items-center gap-1.5">
@@ -505,7 +629,7 @@ export default function DashboardPage() {
                       <StatusBadge status={lead.status} />
                       <span className="text-xs text-slate-400">{lead.time}</span>
                     </div>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
@@ -516,30 +640,34 @@ export default function DashboardPage() {
                 <h2 className="font-bold text-slate-900">{t('topSelling.title')}</h2>
                 <span className="text-xs text-slate-400">{t('topSelling.thisMonth')}</span>
               </div>
-              <div className="space-y-4">
-                {topBikes.map((bike, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <span className="text-xs font-bold text-slate-300 w-5">#{i + 1}</span>
-                    <div className="flex-1">
-                      <div className="flex justify-between mb-1.5">
-                        <span className="text-sm font-semibold text-slate-800">{bike.name}</span>
-                        <span className="text-xs font-bold text-green-600">{bike.rev}</span>
+              {liveTopBikes.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-6">No paid invoices yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {liveTopBikes.map((bike, i) => (
+                    <div key={i} className="flex items-center gap-3">
+                      <span className="text-xs font-bold text-slate-300 w-5">#{i + 1}</span>
+                      <div className="flex-1">
+                        <div className="flex justify-between mb-1.5">
+                          <span className="text-sm font-semibold text-slate-800">{bike.name}</span>
+                          <span className="text-xs font-bold text-green-600">{bike.rev}</span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-1.5">
+                          <div
+                            className="h-1.5 rounded-full stat-bar"
+                            style={{
+                              width: `${(bike.sales / liveTopBikes[0].sales) * 100}%`,
+                              background: i === 0 ? '#FF6B2C' : '#0f1729',
+                              opacity: i === 0 ? 1 : 0.5 + i * 0.1,
+                            }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full bg-slate-100 rounded-full h-1.5">
-                        <div
-                          className="h-1.5 rounded-full stat-bar"
-                          style={{
-                            width: `${(bike.sales / topBikes[0].sales) * 100}%`,
-                            background: i === 0 ? '#FF6B2C' : '#0f1729',
-                            opacity: i === 0 ? 1 : 0.5 + i * 0.1,
-                          }}
-                        />
-                      </div>
+                      <span className="text-xs text-slate-400 w-12 text-right shrink-0">{bike.sales} {t('topSelling.sold')}</span>
                     </div>
-                    <span className="text-xs text-slate-400 w-12 text-right shrink-0">{bike.sales} {t('topSelling.sold')}</span>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

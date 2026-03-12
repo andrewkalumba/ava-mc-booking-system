@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import PasswordInput from '@/components/PasswordInput';
 import { useRouter } from 'next/navigation';
@@ -189,7 +190,7 @@ export default function LoginPage() {
       <div className="hidden md:flex md:w-[45%] bg-[#0f1f2e] text-white p-8 lg:p-16 flex-col justify-between">
         <div>
           <div className="bg-white rounded-2xl px-4 py-2 inline-block mb-4">
-            <img src="/BikeMeNow_logo_test.png" alt="BikeMeNow" className="h-16 w-auto object-contain" />
+            <Image src="/BikeMeNow_logo_test.png" alt="BikeMeNow" width={200} height={64} className="h-16 w-auto object-contain" unoptimized />
           </div>
           <p className="text-slate-300 text-lg mb-12">{t('login.branding.tagline')}</p>
 
@@ -244,7 +245,7 @@ export default function LoginPage() {
         {/* Mobile Logo */}
         <div className="md:hidden absolute top-4 left-4">
           <div className="bg-white rounded-lg p-0.5">
-            <img src="/BikeMeNow_logo_test.png" alt="BikeMeNow" className="h-6 w-auto object-contain" />
+            <Image src="/BikeMeNow_logo_test.png" alt="BikeMeNow" width={100} height={24} className="h-6 w-auto object-contain" unoptimized />
           </div>
         </div>
 

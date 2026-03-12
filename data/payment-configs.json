@@ -107,5 +107,22 @@
     "primaryFinancing": "",
     "credentials": {},
     "updatedAt": "2026-03-10T15:00:54.683Z"
+  },
+  "malm-motors-ab": {
+    "dealerId": "malm-motors-ab",
+    "dealerName": "Malmö Motors AB",
+    "enabledProviders": [
+      "svea",
+      "santander",
+      "resurs",
+      "klarna",
+      "swish",
+      "nets",
+      "stripe",
+      "bank_transfer"
+    ],
+    "primaryFinancing": "",
+    "credentials": {},
+    "updatedAt": "2026-03-12T01:20:43.121Z"
   }
 }

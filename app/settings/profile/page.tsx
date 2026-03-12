@@ -6,6 +6,9 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 import Sidebar from '@/components/Sidebar';
 import PhoneInput from '@/components/PhoneInput';
+import { getSupabaseBrowser } from '@/lib/supabase';
+import { getDealershipId } from '@/lib/tenant';
+import { useAutoRefresh } from '@/lib/realtime';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -141,6 +144,61 @@ function formatBankgiro(raw: string): string {
   return digits;
 }
 
+// ─── Supabase helpers ─────────────────────────────────────────────────────────
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchProfileFromSupabase(dealershipId: string): Promise<Partial<DealershipProfile> | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = await (getSupabaseBrowser() as any)
+    .from('dealership_settings')
+    .select('*')
+    .eq('dealership_id', dealershipId)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    name:              data.name              ?? '',
+    orgNr:             data.org_nr            ?? '',
+    vatNr:             data.vat_nr            ?? '',
+    fSkatt:            data.f_skatt           ?? true,
+    street:            data.street            ?? '',
+    postalCode:        data.postal_code       ?? '',
+    city:              data.city              ?? '',
+    county:            data.county            ?? 'Stockholm',
+    phone:             data.phone             ?? '',
+    email:             data.email             ?? '',
+    website:           data.website           ?? '',
+    bankgiro:          data.bankgiro          ?? '',
+    swish:             data.swish             ?? '',
+    logoDataUrl:       data.logo_data_url         ?? '',
+    coverImageDataUrl: data.cover_image_data_url  ?? '',
+  };
+}
+
+async function saveProfileToSupabase(dealershipId: string, profile: DealershipProfile): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (getSupabaseBrowser() as any)
+    .from('dealership_settings')
+    .upsert({
+      dealership_id:        dealershipId,
+      name:                 profile.name,
+      org_nr:               profile.orgNr,
+      vat_nr:               profile.vatNr,
+      f_skatt:              profile.fSkatt,
+      street:               profile.street,
+      postal_code:          profile.postalCode,
+      city:                 profile.city,
+      county:               profile.county,
+      phone:                profile.phone,
+      email:                profile.email,
+      website:              profile.website,
+      bankgiro:             profile.bankgiro,
+      swish:                profile.swish,
+      logo_data_url:        profile.logoDataUrl,
+      cover_image_data_url: profile.coverImageDataUrl,
+      updated_at:           new Date().toISOString(),
+    }, { onConflict: 'dealership_id' });
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function SectionCard({ title, icon, children }: {
@@ -220,23 +278,43 @@ export default function DealershipProfilePage() {
   const [coverResizing, setCoverResizing] = useState(false);
   const [coverResized, setCoverResized]   = useState(false);
 
-  useEffect(() => {
+  const loadProfile = async () => {
     const raw = localStorage.getItem('user');
-    if (!raw) { router.replace('/auth/login'); return; }
+    if (!raw) return;
+    const user = JSON.parse(raw);
+    const dealershipId = getDealershipId();
 
+    // 1. Try Supabase first (source of truth across devices)
+    if (dealershipId) {
+      const remote = await fetchProfileFromSupabase(dealershipId);
+      if (remote && remote.name) {
+        const merged = { ...DEFAULTS, ...remote };
+        setProfile(merged);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+        return;
+      }
+    }
+
+    // 2. Fall back to localStorage cache
     try {
-      const user = JSON.parse(raw);
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
       if (saved.name) {
         setProfile({ ...DEFAULTS, ...saved });
       } else {
-        // Pre-fill name from signup data so the form isn't blank
         setProfile({ ...DEFAULTS, name: user.dealershipName || user.dealership || '' });
       }
-    } catch {
-      // use defaults
-    }
+    } catch { /* use defaults */ }
+  };
+
+  useEffect(() => {
+    const raw = localStorage.getItem('user');
+    if (!raw) { router.replace('/auth/login'); return; }
+    loadProfile();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
+
+  // Re-load whenever another device saves the profile (Supabase Realtime → data:refresh)
+  useAutoRefresh(loadProfile);
 
   // ── Field helpers ──────────────────────────────────────────────────────────
 
@@ -327,7 +405,7 @@ export default function DealershipProfilePage() {
 
   // ── Save ───────────────────────────────────────────────────────────────────
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setSaving(true);
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
@@ -340,10 +418,14 @@ export default function DealershipProfilePage() {
         localStorage.setItem('user', JSON.stringify(user));
       }
 
-      setTimeout(() => {
-        setSaving(false);
-        toast.success('Profil sparad', { description: `${profile.name} · ${profile.orgNr}` });
-      }, 350);
+      // Write to Supabase so other devices receive the update via Realtime
+      const dealershipId = getDealershipId();
+      if (dealershipId) {
+        await saveProfileToSupabase(dealershipId, profile);
+      }
+
+      setSaving(false);
+      toast.success('Profil sparad', { description: `${profile.name} · ${profile.orgNr}` });
     } catch {
       setSaving(false);
       toast.error('Kunde inte spara profilen.');

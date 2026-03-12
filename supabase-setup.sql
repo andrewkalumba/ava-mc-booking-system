@@ -510,3 +510,32 @@ CREATE INDEX IF NOT EXISTS idx_webhook_events_created_at ON webhook_events(creat
 
 -- Enable Supabase Realtime on this table so browser clients get live INSERTs
 ALTER PUBLICATION supabase_realtime ADD TABLE webhook_events;
+
+-- ============================================
+-- Dealership settings / profile
+-- ============================================
+-- Stores company profile, contact info, and branding for each dealership.
+-- One row per dealership_id (UUID from auth / signup).
+
+CREATE TABLE IF NOT EXISTS dealership_settings (
+  dealership_id        UUID        PRIMARY KEY,
+  name                 TEXT,
+  org_nr               TEXT,
+  vat_nr               TEXT,
+  f_skatt              BOOLEAN     DEFAULT TRUE,
+  street               TEXT,
+  postal_code          TEXT,
+  city                 TEXT,
+  county               TEXT        DEFAULT 'Stockholm',
+  phone                TEXT,
+  email                TEXT,
+  website              TEXT,
+  bankgiro             TEXT,
+  swish                TEXT,
+  logo_data_url        TEXT,       -- base64 data URL, max ~250 KB
+  cover_image_data_url TEXT,       -- base64 data URL, max ~800 KB
+  updated_at           TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable Realtime so profile changes on one device propagate to all others
+ALTER PUBLICATION supabase_realtime ADD TABLE dealership_settings;

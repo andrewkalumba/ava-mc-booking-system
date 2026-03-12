@@ -200,27 +200,40 @@ export default function UsersSettingsPage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   }
 
-  function toggleStatus(id: string) {
-    const next = users.map(u =>
-      u.id === id ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' as Status } : u
-    );
-    persist(next);
-    const user = next.find(u => u.id === id)!;
-    toast.success(`${user.name} ${user.status === 'active' ? 'aktiverad' : 'inaktiverad'}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const dbClient = () => getSupabaseBrowser() as any;
+
+  async function toggleStatus(id: string) {
+    const target = users.find(u => u.id === id);
+    if (!target) return;
+    const newStatus: Status = target.status === 'active' ? 'inactive' : 'active';
+    // Optimistic UI update
+    persist(users.map(u => u.id === id ? { ...u, status: newStatus } : u));
+    toast.success(`${target.name} ${newStatus === 'active' ? 'aktiverad' : 'inaktiverad'}`);
+    // Sync to Supabase (match by email — the reliable unique key across the table)
+    try {
+      await dbClient().from('staff_users').update({ status: newStatus }).eq('email', target.email);
+    } catch { /* pending user may not exist in DB yet — non-blocking */ }
   }
 
-  function changeRole(id: string, role: Role) {
-    const next = users.map(u => u.id === id ? { ...u, role } : u);
-    persist(next);
+  async function changeRole(id: string, role: Role) {
+    const target = users.find(u => u.id === id);
+    if (!target) return;
+    persist(users.map(u => u.id === id ? { ...u, role } : u));
     toast.success('Roll uppdaterad');
+    try {
+      await dbClient().from('staff_users').update({ role }).eq('email', target.email);
+    } catch { /* pending user may not exist in DB yet */ }
   }
 
-  function removeUser(id: string) {
-    const user = users.find(u => u.id === id);
-    if (!user) return;
-    const next = users.filter(u => u.id !== id);
-    persist(next);
-    toast.success(`${user.name} borttagen`);
+  async function removeUser(id: string) {
+    const target = users.find(u => u.id === id);
+    if (!target) return;
+    persist(users.filter(u => u.id !== id));
+    toast.success(`${target.name} borttagen`);
+    try {
+      await dbClient().from('staff_users').delete().eq('email', target.email);
+    } catch { /* non-blocking */ }
   }
 
   async function handleInvite(e: React.FormEvent) {

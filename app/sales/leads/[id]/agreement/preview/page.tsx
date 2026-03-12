@@ -65,12 +65,9 @@ export default function AgreementPreviewPage() {
   const t = useTranslations('agreement');
   const [ready, setReady] = useState(false);
   const [dealer, setDealer] = useState({ name: '', orgNr: '', city: '', email: '' });
-<<<<<<< HEAD
   const [buyerName, setBuyerName] = useState(MOCK_AGREEMENT.buyerName);
   const [personnummer, setPersonnummer] = useState(MOCK_AGREEMENT.personnummer);
   const [buyerAddress, setBuyerAddress] = useState(MOCK_AGREEMENT.buyerAddress);
-=======
->>>>>>> payments
 
   useEffect(() => {
     const raw = localStorage.getItem('user');
@@ -87,7 +84,6 @@ export default function AgreementPreviewPage() {
     } catch {
       setDealer({ name: user.dealershipName || 'My Dealership', orgNr: '—', city: '—', email: '—' });
     }
-<<<<<<< HEAD
 
     // Fetch real buyer name and personnummer from the lead
     const leadId = Number(id);
@@ -111,8 +107,6 @@ export default function AgreementPreviewPage() {
       })();
     }
 
-=======
->>>>>>> payments
     setReady(true);
   }, [id, router]);
 

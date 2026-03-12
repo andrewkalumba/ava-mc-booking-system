@@ -184,6 +184,10 @@ export function startSupabaseSync(dealershipId: string): () => void {
     .on('postgres_changes',
       { event: '*', schema: 'public', table: 'staff_users', filter: `dealership_id=eq.${dealershipId}` },
       () => emit({ type: 'data:refresh' }))
+    // ── dealership profile / settings ────────────────────────────────────
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'dealership_settings', filter: `dealership_id=eq.${dealershipId}` },
+      () => emit({ type: 'data:refresh' }))
     .subscribe();
 
   _realtimeChannel = ch;
