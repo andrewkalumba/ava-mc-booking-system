@@ -206,7 +206,9 @@ export default function SignupPage() {
       <div className="min-h-screen bg-[#f8fafc]">
         {/* Nav */}
         <nav className="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-white">
-          <span className="text-[#FF6B2C] text-xl font-bold tracking-tight">BikeMeNow</span>
+          <div className="bg-white rounded-xl px-2 py-1 border border-slate-100">
+            <img src="/BikeMeNow_logo_test.png" alt="BikeMeNow" className="h-7 w-auto object-contain" />
+          </div>
           <Link href="/auth/login" className="text-[#FF6B2C] text-sm font-medium hover:underline">
             {t('alreadyHaveAccount')} {t('signIn')} →
           </Link>
@@ -324,7 +326,9 @@ export default function SignupPage() {
     <div className="min-h-screen bg-[#f8fafc] flex flex-col">
       {/* Slim nav */}
       <nav className="flex items-center justify-between px-8 py-4 border-b border-slate-100 bg-white">
-        <span className="text-[#FF6B2C] text-lg font-bold tracking-tight">BikeMeNow</span>
+        <div className="bg-white rounded-xl px-2 py-1 border border-slate-100">
+            <img src="/BikeMeNow_logo_test.png" alt="BikeMeNow" className="h-7 w-auto object-contain" />
+          </div>
         <Link href="/auth/login" className="text-slate-500 text-sm hover:text-slate-700">
           {t('alreadyHaveAccount')} <span className="text-[#FF6B2C] font-medium">{t('signIn')} →</span>
         </Link>

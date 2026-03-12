@@ -23,7 +23,9 @@ export default function ForgotPasswordPage() {
       {/* Left Side - Branding */}
       <div className="hidden md:flex md:w-[45%] bg-[#0f1f2e] text-white p-8 lg:p-16 flex-col justify-between">
         <div>
-          <h1 className="text-[#FF6B2C] text-4xl font-bold mb-4">BikeMeNow</h1>
+          <div className="bg-white rounded-2xl px-4 py-2 inline-block mb-4">
+            <img src="/BikeMeNow_logo_test.png" alt="BikeMeNow" className="h-16 w-auto object-contain" />
+          </div>
           <p className="text-slate-300 text-lg mb-12">{t('branding.tagline')}</p>
 
           <div className="space-y-8">
@@ -76,7 +78,9 @@ export default function ForgotPasswordPage() {
 
         {/* Mobile Logo */}
         <div className="md:hidden absolute top-4 left-4">
-          <h1 className="text-[#FF6B2C] text-xl font-bold">BikeMeNow</h1>
+          <div className="bg-white rounded-lg p-0.5">
+            <img src="/BikeMeNow_logo_test.png" alt="BikeMeNow" className="h-6 w-auto object-contain" />
+          </div>
         </div>
 
         <div className="w-full max-w-md mt-12 md:mt-0">

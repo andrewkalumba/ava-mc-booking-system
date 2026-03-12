@@ -9,7 +9,6 @@
     "lint": "eslint"
   },
   "dependencies": {
-
     "@supabase/supabase-js": "^2.99.0",
     "crypto-js": "^4.2.0",
     "jspdf": "^4.2.0",

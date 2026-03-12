@@ -6,9 +6,12 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import Sidebar from '@/components/Sidebar';
 import { getDealerInfo } from '@/lib/dealer';
+<<<<<<< HEAD
 import { convertLeadToCustomer } from '@/lib/leads';
 import { emit } from '@/lib/realtime';
 import { toast } from 'sonner';
+=======
+>>>>>>> payments
 
 interface SelectedPayment {
   id:       string;
