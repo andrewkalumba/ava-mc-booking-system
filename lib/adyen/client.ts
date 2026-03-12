@@ -77,7 +77,7 @@ export interface AdyenLineItem {
 }
 
 export interface AdyenPaymentSessionRequest {
-  merchantAccount:   string;
+  merchantAccount?:  string;
   amount:            AdyenAmount;
   reference:         string;      // your order reference
   returnUrl:         string;      // customer redirect URL after payment
@@ -113,17 +113,17 @@ export interface AdyenPaymentResult {
 }
 
 export interface AdyenCaptureRequest {
-  merchantAccount: string;
-  amount:          AdyenAmount;
-  reference?:      string;
-  lineItems?:      AdyenLineItem[];
+  merchantAccount?: string;
+  amount:           AdyenAmount;
+  reference?:       string;
+  lineItems?:       AdyenLineItem[];
 }
 
 export interface AdyenRefundRequest {
-  merchantAccount: string;
-  amount:          AdyenAmount;
-  reference?:      string;
-  lineItems?:      AdyenLineItem[];
+  merchantAccount?: string;
+  amount:           AdyenAmount;
+  reference?:       string;
+  lineItems?:       AdyenLineItem[];
 }
 
 export interface AdyenTerminal {

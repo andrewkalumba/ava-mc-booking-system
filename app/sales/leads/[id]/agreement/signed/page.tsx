@@ -7,6 +7,8 @@ import { useTranslations } from 'next-intl';
 import Sidebar from '@/components/Sidebar';
 import jsPDF from 'jspdf';
 import { getDealerInfo } from '@/lib/dealer';
+import { getSupabaseBrowser } from '@/lib/supabase';
+import { getDealershipId } from '@/lib/tenant';
 
 interface SignRecord {
   name:           string;
@@ -48,6 +50,8 @@ export default function SignedAgreementPage() {
   const [sellerName, setSellerName]   = useState('');
   const [sellerAddress, setSellerAddress] = useState('');
   const [sellerOrgNr, setSellerOrgNr] = useState('');
+  const [buyerName, setBuyerName]     = useState('');
+  const [buyerAddress, setBuyerAddress] = useState('');
 
   useEffect(() => {
     const user = localStorage.getItem('user');
@@ -64,14 +68,43 @@ export default function SignedAgreementPage() {
       // ignore
     }
 
-    try {
-      const customLeads = JSON.parse(localStorage.getItem('custom_leads') || '[]');
-      const lead = customLeads.find((l: any) => String(l.id) === id);
-      if (lead?.email || lead?.phone) {
-        setContact({ email: lead.email || '', phone: lead.phone || '' });
-      }
-    } catch {
-      // ignore
+    // Fetch live buyer name + address from Supabase
+    const leadId       = Number(id);
+    const dealershipId = getDealershipId();
+    if (!Number.isNaN(leadId) && dealershipId) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (getSupabaseBrowser() as any)
+        .from('leads')
+        .select('name, personnummer, address, city, customer_id, email, phone')
+        .eq('id', leadId)
+        .eq('dealership_id', dealershipId)
+        .maybeSingle()
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .then(async ({ data: lead }: any) => {
+          if (!lead) return;
+          setBuyerName(lead.name ?? '');
+          if (lead.email || lead.phone) {
+            setContact({ email: lead.email || '', phone: lead.phone || '' });
+          }
+          // Try customer record first (may have canonical address from BankID)
+          if (lead.customer_id) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const { data: cust } = await (getSupabaseBrowser() as any)
+              .from('customers')
+              .select('first_name, last_name, address, city')
+              .eq('id', lead.customer_id)
+              .eq('dealership_id', dealershipId)
+              .maybeSingle();
+            if (cust) {
+              setBuyerName(`${cust.first_name} ${cust.last_name}`.trim());
+              const addr = [cust.address, cust.city].filter(Boolean).join(', ');
+              if (addr) setBuyerAddress(addr);
+              return;
+            }
+          }
+          const addr = [lead.address, lead.city].filter(Boolean).join(', ');
+          if (addr) setBuyerAddress(addr);
+        });
     }
 
     setReady(true);
@@ -127,7 +160,7 @@ export default function SignedAgreementPage() {
     // Fields
     const fields = [
       { label: 'SÄLJARE',       value: `${sellerName}, ${sellerAddress}` },
-      { label: 'KÖPARE',        value: `${AGR_BASE.buyerName}, ${AGR_BASE.buyerAddress}` },
+      { label: 'KÖPARE',        value: [buyerName, buyerAddress].filter(Boolean).join(', ') || '—' },
       { label: 'FORDON',        value: `${AGR_BASE.vehicle}, VIN: ${AGR_BASE.vin}` },
       { label: 'TILLBEHÖR',     value: AGR_BASE.accessories },
       { label: 'INBYTE',        value: AGR_BASE.tradeIn },
@@ -290,7 +323,7 @@ export default function SignedAgreementPage() {
 
   const fields = [
     { label: 'SÄLJARE',       value: `${sellerName}, ${sellerAddress}` },
-    { label: 'KÖPARE',        value: `${AGR_BASE.buyerName}, ${AGR_BASE.buyerAddress}` },
+    { label: 'KÖPARE',        value: [buyerName, buyerAddress].filter(Boolean).join(', ') || '—' },
     { label: 'FORDON',        value: `${AGR_BASE.vehicle}, VIN: ${AGR_BASE.vin}` },
     { label: 'TILLBEHÖR',     value: AGR_BASE.accessories },
     { label: 'INBYTE',        value: AGR_BASE.tradeIn },

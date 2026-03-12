@@ -188,6 +188,10 @@ export function startSupabaseSync(dealershipId: string): () => void {
     .on('postgres_changes',
       { event: '*', schema: 'public', table: 'dealership_settings', filter: `dealership_id=eq.${dealershipId}` },
       () => emit({ type: 'data:refresh' }))
+    // ── webhook events (payment provider callbacks, no dealership filter) ─
+    .on('postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'webhook_events' },
+      () => emit({ type: 'data:refresh' }))
     .subscribe();
 
   _realtimeChannel = ch;

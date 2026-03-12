@@ -11,7 +11,9 @@ export async function POST(
     const { amount, currency } = await req.json();
     if (!amount) return NextResponse.json({ error: 'amount is required' }, { status: 400 });
 
-    const result = await refundPayment(paymentPspReference, amount, currency ?? 'SEK');
+    const result = await refundPayment(paymentPspReference, {
+      amount: { currency: currency ?? 'SEK', value: amount },
+    });
     return NextResponse.json(result);
   } catch (error: any) {
     console.error('[Adyen refund]', error.message);

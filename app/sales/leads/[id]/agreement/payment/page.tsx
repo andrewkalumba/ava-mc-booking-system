@@ -9,8 +9,11 @@ import Sidebar from '@/components/Sidebar';
 import PhoneInput from '@/components/PhoneInput';
 import { notify } from '@/lib/notifications';
 import { createInvoice, markInvoicePaid } from '@/lib/invoices';
+import { convertLeadToCustomer } from '@/lib/leads';
 import { emit } from '@/lib/realtime';
 import { getDealerInfo } from '@/lib/dealer';
+import { getSupabaseBrowser } from '@/lib/supabase';
+import { getDealershipId } from '@/lib/tenant';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,21 +56,55 @@ const CATEGORY_ORDER: PaymentCategory[] = [
 
 const STEPS = ['Avtal', 'Förhandsvisning', 'Signering', 'Betalning', 'Klart'];
 
-// Mocked deal data (in production this comes from the lead/agreement API)
-const DEAL = {
-  customer:       'Lars Bergman',
-  vehicle:        'Kawasaki Ninja ZX-6R 2024',
-  vin:            'JKBZXR636PA012345',   // used for Svea ArticleNumber
-  agreementId:    'AGR-2024-0089',
-  amountDisplay:  '133 280',
-  amountSek:      133280,                // numeric SEK (for Svea)
-  amountMinor:    13328000,              // öre (SEK × 100)
-  amountDecimal:  '133280.00',
-  currency:       'SEK',
-  bankgiro:       '1234-5678',
-  ocr:            '20240089',
-  receiver:       '',
-};
+// ─── Deal data shape (replaces hard-coded constant — loaded from Supabase) ─────
+
+interface DealData {
+  customer:      string;
+  vehicle:       string;
+  vin:           string;
+  agreementId:   string;
+  amountDisplay: string;
+  amountSek:     number;
+  amountMinor:   number;   // öre (SEK × 100) — required by Nets/Svea APIs
+  amountDecimal: string;   // "133280.00" — required by Klarna/Stripe APIs
+  currency:      string;
+  bankgiro:      string;
+  ocr:           string;
+  receiver:      string;
+}
+
+function buildDeal(
+  leadName:  string,
+  leadBike:  string,
+  leadValue: number,
+  leadId:    string,
+  bankgiro:  string,
+  dealerName:string,
+  storedAgreementId?: string,
+  storedVin?: string,
+): DealData {
+  const year   = new Date().getFullYear();
+  const pad    = String(leadId).padStart(4, '0');
+  const agrId  = storedAgreementId || `AGR-${year}-${pad}`;
+  const ocr    = agrId.replace(/\D/g, '').slice(-8).padStart(8, '0');
+  const amt    = leadValue || 0;
+  return {
+    customer:      leadName      || '—',
+    vehicle:       leadBike      || '—',
+    vin:           storedVin     || '',
+    agreementId:   agrId,
+    amountDisplay: amt.toLocaleString('sv-SE'),
+    amountSek:     amt,
+    amountMinor:   Math.round(amt * 100),
+    amountDecimal: amt.toFixed(2),
+    currency:      'SEK',
+    bankgiro:      bankgiro      || '',
+    ocr,
+    receiver:      dealerName    || '',
+  };
+}
+
+const DEAL_DEFAULTS: DealData = buildDeal('', '', 0, '0', '', '', undefined, undefined);
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
@@ -81,6 +118,7 @@ export default function AgreementPaymentPage() {
   const [loading, setLoading]     = useState(true);
   const [providers, setProviders] = useState<EnabledProvider[]>([]);
   const [selected, setSelected]   = useState<EnabledProvider | null>(null);
+  const [deal, setDeal]           = useState<DealData>(DEAL_DEFAULTS);
 
   // Swish phone
   const [phone, setPhone]         = useState('');
@@ -112,33 +150,68 @@ export default function AgreementPaymentPage() {
   useEffect(() => {
     if (flowStep !== 'success') return;
     const paymentMethod = selected?.name ?? '—';
-    // Create a paid invoice (deduplicates on repeat renders)
-    const vatAmount = Math.round(DEAL.amountSek - DEAL.amountSek / 1.25);
-    createInvoice({
-      leadId:        id,
-      customerName:  DEAL.customer,
-      vehicle:       DEAL.vehicle,
-      agreementRef:  DEAL.agreementId,
-      totalAmount:   DEAL.amountSek,
-      vatAmount,
-      netAmount:     DEAL.amountSek - vatAmount,
-      paymentMethod,
-      status:        'paid',
-      paidDate:      new Date().toISOString(),
-    });
+    const vatAmount     = Math.round(deal.amountSek - deal.amountSek / 1.25);
+
+    // Convert lead → customer (finds or creates), then create invoice linked to that customer
+    convertLeadToCustomer(Number(id))
+      .then(async ({ customerId }) => {
+        // Resolve canonical customer name from customers table (so invoice matches Supabase record)
+        let customerName = deal.customer;
+        if (customerId) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const sb = getSupabaseBrowser() as any;
+          const dealershipId = getDealershipId();
+          const { data: cust } = await sb
+            .from('customers')
+            .select('first_name, last_name')
+            .eq('id', customerId)
+            .eq('dealership_id', dealershipId)
+            .maybeSingle();
+          if (cust) customerName = `${cust.first_name} ${cust.last_name}`.trim();
+        }
+        return createInvoice({
+          leadId:        id,
+          customerId:    customerId ?? undefined,
+          customerName,
+          vehicle:       deal.vehicle,
+          agreementRef:  deal.agreementId,
+          totalAmount:   deal.amountSek,
+          vatAmount,
+          netAmount:     deal.amountSek - vatAmount,
+          paymentMethod,
+          status:        'paid',
+          paidDate:      new Date().toISOString(),
+        });
+      })
+      .catch(() => {
+        // Customer conversion failed — still create invoice with lead name as fallback
+        createInvoice({
+          leadId:        id,
+          customerName:  deal.customer,
+          vehicle:       deal.vehicle,
+          agreementRef:  deal.agreementId,
+          totalAmount:   deal.amountSek,
+          vatAmount,
+          netAmount:     deal.amountSek - vatAmount,
+          paymentMethod,
+          status:        'paid',
+          paidDate:      new Date().toISOString(),
+        });
+      });
+
     // Also mark any pending invoice for this lead as paid (in case one was pre-created)
     markInvoicePaid(id, paymentMethod);
-    emit({ type: 'payment:received', payload: { leadId: id, amount: DEAL.amountSek, method: paymentMethod } });
+    emit({ type: 'payment:received', payload: { leadId: id, amount: deal.amountSek, method: paymentMethod } });
     notify('paymentReceived', {
       type:    'payment',
       title:   tNotif('actions.paymentConfirmed.title'),
-      message: `${DEAL.customer} — ${DEAL.amountDisplay} kr${selected ? ` ${tNotif('actions.paymentConfirmed.via')} ${selected.name}` : ''}`,
+      message: `${deal.customer} — ${deal.amountDisplay} kr${selected ? ` ${tNotif('actions.paymentConfirmed.via')} ${selected.name}` : ''}`,
       href:    `/sales/leads/${id}/agreement/complete`,
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flowStep]);
 
-  // Auth + load providers
+  // Auth + load providers + load live deal data from Supabase
   useEffect(() => {
     const raw = localStorage.getItem('user');
     if (!raw) { router.replace('/auth/login'); return; }
@@ -146,10 +219,46 @@ export default function AgreementPaymentPage() {
     const dealerId = (user.dealershipName || user.dealership || 'ava-mc')
       .toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
     setReady(true);
+
+    // Fetch payment providers
     fetch(`/api/payments/enabled?dealerId=${dealerId}`)
       .then((r) => r.json())
       .then((data) => { setProviders(data.enabledProviders ?? []); setLoading(false); })
       .catch(() => setLoading(false));
+
+    // Fetch lead + dealership to build live deal data
+    const dealershipId = getDealershipId();
+    if (dealershipId && id && id !== 'default') {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = getSupabaseBrowser() as any;
+      Promise.all([
+        sb.from('leads').select('name, bike, value, personnummer').eq('id', id).eq('dealership_id', dealershipId).maybeSingle(),
+        sb.from('dealership_settings').select('bankgiro, name').eq('dealership_id', dealershipId).maybeSingle(),
+      ]).then(([leadRes, dsRes]: any[]) => {
+        const lead   = leadRes.data;
+        const ds     = dsRes.data;
+        if (!lead) return;
+        // Check localStorage for agreement data (saved by the agreement editor)
+        let storedAgreementId: string | undefined;
+        let storedVin: string | undefined;
+        try {
+          const agr = JSON.parse(localStorage.getItem(`agreement_${id}`) ?? '{}');
+          storedAgreementId = agr.agreementNumber ?? agr.agreementRef;
+          storedVin         = agr.vin ?? agr.vinNumber;
+        } catch { /* ignore */ }
+        setDeal(buildDeal(
+          lead.name  ?? '',
+          lead.bike  ?? '',
+          parseFloat(lead.value ?? '0'),
+          id,
+          ds?.bankgiro ?? '',
+          ds?.name     ?? getDealerInfo().name ?? '',
+          storedAgreementId,
+          storedVin,
+        ));
+      }).catch(() => { /* keep DEAL_DEFAULTS */ });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   // Select provider + reset flow
@@ -188,19 +297,19 @@ export default function AgreementPaymentPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount:     DEAL.amountMinor,
-          currency:   DEAL.currency,
-          reference:  DEAL.agreementId,
+          amount:     deal.amountMinor,
+          currency:   deal.currency,
+          reference:  deal.agreementId,
           orderItems: [{
-            reference:        DEAL.agreementId,
+            reference:        deal.agreementId,
             name:             'Köpeavtal motorcykel',
             quantity:         1,
             unit:             'pcs',
-            unitPrice:        DEAL.amountMinor,
+            unitPrice:        deal.amountMinor,
             taxRate:          2500,
-            taxAmount:        Math.round(DEAL.amountMinor * 0.25 / 1.25),
-            netTotalAmount:   Math.round(DEAL.amountMinor / 1.25),
-            grossTotalAmount: DEAL.amountMinor,
+            taxAmount:        Math.round(deal.amountMinor * 0.25 / 1.25),
+            netTotalAmount:   Math.round(deal.amountMinor / 1.25),
+            grossTotalAmount: deal.amountMinor,
           }],
         }),
       });
@@ -249,11 +358,11 @@ export default function AgreementPaymentPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          orderId:    DEAL.agreementId,
+          orderId:    deal.agreementId,
           payerAlias: normalised,
-          amount:     DEAL.amountDecimal,
-          currency:   DEAL.currency,
-          message:    `Betalning ${DEAL.agreementId}`,
+          amount:     deal.amountDecimal,
+          currency:   deal.currency,
+          message:    `Betalning ${deal.agreementId}`,
         }),
       });
       const data = await res.json();
@@ -294,9 +403,9 @@ export default function AgreementPaymentPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           authorization_token: authorizationToken,
-          agreementNumber:     DEAL.agreementId,
-          vehicle:             DEAL.vehicle,
-          balanceDue:          DEAL.amountSek,
+          agreementNumber:     deal.agreementId,
+          vehicle:             deal.vehicle,
+          balanceDue:          deal.amountSek,
         }),
       });
       const data = await res.json();
@@ -322,9 +431,9 @@ export default function AgreementPaymentPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            agreementNumber: DEAL.agreementId,
-            vehicle:         DEAL.vehicle,
-            balanceDue:      DEAL.amountSek,
+            agreementNumber: deal.agreementId,
+            vehicle:         deal.vehicle,
+            balanceDue:      deal.amountSek,
           }),
         });
         const data = await res.json();
@@ -348,29 +457,29 @@ export default function AgreementPaymentPage() {
 
       if (selected.id.startsWith('stripe')) {
         endpoint = '/api/stripe/payment-intent';
-        body = { amount: DEAL.amountMinor, currency: DEAL.currency.toLowerCase() };
+        body = { amount: deal.amountMinor, currency: deal.currency.toLowerCase() };
       } else if (selected.id.startsWith('trustly')) {
         endpoint = '/api/trustly/deposit';
         body = {
           notificationUrl: `${window.location.origin}/api/trustly/callback`,
           successUrl:      `${window.location.origin}/sales/leads/${id}/agreement/complete`,
           failUrl:         `${window.location.origin}/sales/leads/${id}/agreement/payment`,
-          currency:        DEAL.currency,
-          amount:          DEAL.amountDecimal,
-          firstname:       DEAL.customer.split(' ')[0],
-          lastname:        DEAL.customer.split(' ').slice(1).join(' '),
+          currency:        deal.currency,
+          amount:          deal.amountDecimal,
+          firstname:       deal.customer.split(' ')[0],
+          lastname:        deal.customer.split(' ').slice(1).join(' '),
           email:           'customer@example.com',
           mobile:          '',
         };
       } else {
         body = {
-          merchantReference: DEAL.agreementId,
-          currency:          DEAL.currency,
+          merchantReference: deal.agreementId,
+          currency:          deal.currency,
           country:           'SE',
           orderItems: [{
-            productCode: DEAL.agreementId,
+            productCode: deal.agreementId,
             productName: 'Köpeavtal motorcykel',
-            price:       DEAL.amountMinor,
+            price:       deal.amountMinor,
             quantity:    1,
             vatPercent:  25,
           }],
@@ -405,11 +514,11 @@ export default function AgreementPaymentPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          agreementNumber: DEAL.agreementId,
+          agreementNumber: deal.agreementId,
           customerPhone:   phone.startsWith('+') ? phone : `+${phone.replace(/\D/g, '').replace(/^0/, '46')}`,
-          vehicleName:     DEAL.vehicle,
-          vin:             DEAL.vin,
-          balanceDue:      DEAL.amountSek,
+          vehicleName:     deal.vehicle,
+          vin:             deal.vin,
+          balanceDue:      deal.amountSek,
         }),
       });
       const data = await res.json();
@@ -450,7 +559,7 @@ export default function AgreementPaymentPage() {
     setFlowStep('initiating');
     setBankNotReceived(false);
     try {
-      const res  = await fetch(`/api/bank-transfer/check/${DEAL.ocr}`);
+      const res  = await fetch(`/api/bank-transfer/check/${deal.ocr}`);
       const data = await res.json();
       if (data.received) {
         setFlowStep('success');
@@ -466,7 +575,7 @@ export default function AgreementPaymentPage() {
 
   const copyBankDetails = () => {
     navigator.clipboard?.writeText(
-      `Bankgiro: ${DEAL.bankgiro}  |  OCR: ${DEAL.ocr}  |  Belopp: ${DEAL.amountDisplay} kr`,
+      `Bankgiro: ${deal.bankgiro}  |  OCR: ${deal.ocr}  |  Belopp: ${deal.amountDisplay} kr`,
     );
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -553,14 +662,14 @@ export default function AgreementPaymentPage() {
 
           {/* Deal summary strip */}
           <div className="mx-5 md:mx-8 mb-4 bg-gradient-to-r from-[#0b1524] to-[#1a2a42] rounded-2xl px-5 py-4 flex flex-wrap items-center gap-x-6 gap-y-2">
-            <DealPill icon="👤" label="Kund"   value={DEAL.customer} />
+            <DealPill icon="👤" label="Kund"   value={deal.customer} />
             <div className="w-px h-8 bg-white/10 hidden sm:block" />
-            <DealPill icon="🏍️" label="Fordon" value={DEAL.vehicle} />
+            <DealPill icon="🏍️" label="Fordon" value={deal.vehicle} />
             <div className="w-px h-8 bg-white/10 hidden sm:block" />
-            <DealPill icon="📄" label="Avtal"  value={DEAL.agreementId} />
+            <DealPill icon="📄" label="Avtal"  value={deal.agreementId} />
             <div className="ml-auto text-right">
               <p className="text-[10px] text-slate-400 uppercase tracking-wider">Totalt belopp</p>
-              <p className="text-xl font-extrabold text-[#FF6B2C]">{DEAL.amountDisplay} kr</p>
+              <p className="text-xl font-extrabold text-[#FF6B2C]">{deal.amountDisplay} kr</p>
             </div>
           </div>
         </div>
@@ -694,6 +803,7 @@ export default function AgreementPaymentPage() {
                       onKlarnaOrder={handleKlarnaOrder}
                       onRetry={() => { setFlowStep('idle'); setFlowError(null); setKlarnaSession(null); setBankNotReceived(false); }}
                       confirming={confirming}
+                      deal={deal}
                     />
                   )}
                 </div>
@@ -756,6 +866,7 @@ function ActionPanel({
   provider, phone, copied, flowStep, flowPaymentId, checkoutUrl, klarnaSession, flowError,
   bankNotReceived, onPhoneChange, onConfirm, onCopy, onInitiateTerminal,
   onInitiateSwish, onInitiateSvea, onCreateCheckout, onCheckBankTransfer, onKlarnaOrder, onRetry, confirming,
+  deal,
 }: {
   provider:            EnabledProvider;
   phone:               string;
@@ -777,10 +888,11 @@ function ActionPanel({
   onKlarnaOrder:       (authorizationToken: string) => Promise<void>;
   onRetry:             () => void;
   confirming:          boolean;
+  deal:                DealData;
 }) {
   const cat  = provider.category;
   const meta = CATEGORY_META[cat];
-  const dealerName = getDealerInfo().name || DEAL.receiver;
+  const dealerName = getDealerInfo().name || deal.receiver;
 
   const isIdle      = flowStep === 'idle' || flowStep === 'initiating';
   const isWaiting   = flowStep === 'waiting';
@@ -856,8 +968,8 @@ function ActionPanel({
       {/* Amount strip */}
       <div className="px-5 py-4 bg-gradient-to-b from-slate-50 to-white border-b border-slate-100">
         <p className="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Belopp att inkassera</p>
-        <p className="text-3xl font-extrabold text-[#0b1524]">{DEAL.amountDisplay} kr</p>
-        <p className="text-xs text-slate-400 mt-0.5">Avtal {DEAL.agreementId} • inkl. 25% moms</p>
+        <p className="text-3xl font-extrabold text-[#0b1524]">{deal.amountDisplay} kr</p>
+        <p className="text-xs text-slate-400 mt-0.5">Avtal {deal.agreementId} • inkl. 25% moms</p>
       </div>
 
       <div className="px-5 py-4 space-y-3">
@@ -882,7 +994,7 @@ function ActionPanel({
         )}
 
         {/* ── TERMINAL WAITING ── */}
-        {isWaiting && cat === 'card_terminal' && <TerminalWaiting />}
+        {isWaiting && cat === 'card_terminal' && <TerminalWaiting amountDisplay={deal.amountDisplay} />}
 
         {/* ── SWISH WAITING ── */}
         {isWaiting && cat === 'instant' && provider.id === 'swish' && <SwishWaiting phone={phone} />}
@@ -924,8 +1036,8 @@ function ActionPanel({
                     placeholder="70 123 45 67"
                   />
                 </div>
-                <Row label="Avtal" value={DEAL.agreementId} />
-                <Row label="Belopp" value={`${DEAL.amountDisplay} kr`} />
+                <Row label="Avtal" value={deal.agreementId} />
+                <Row label="Belopp" value={`${deal.amountDisplay} kr`} />
                 <Btn
                   label="Skicka finansieringslänk via SMS"
                   icon="📱"
@@ -943,10 +1055,10 @@ function ActionPanel({
               <>
                 <InfoBox color="blue">
                   Finansieringsansökan skickas till <strong>{provider.name}</strong> med
-                  köpeavtal {DEAL.agreementId}. Kunden aviseras via SMS och e-post.
+                  köpeavtal {deal.agreementId}. Kunden aviseras via SMS och e-post.
                 </InfoBox>
                 <Row label="Finansiär" value={provider.name} />
-                <Row label="Avtal" value={DEAL.agreementId} />
+                <Row label="Avtal" value={deal.agreementId} />
                 <Btn label="Markera som finansierad" icon="✅" onClick={onConfirm} loading={confirming} loadingLabel="Behandlar…" variant="dark" />
               </>
             )}
@@ -993,7 +1105,7 @@ function ActionPanel({
             {cat === 'instant' && provider.id === 'swish' && (
               <>
                 <InfoBox color="green">
-                  Ange kundens mobilnummer för att skicka en <strong>Swish-förfrågan</strong> på {DEAL.amountDisplay} kr direkt till deras telefon.
+                  Ange kundens mobilnummer för att skicka en <strong>Swish-förfrågan</strong> på {deal.amountDisplay} kr direkt till deras telefon.
                 </InfoBox>
                 <div>
                   <label className="text-xs font-bold text-slate-600 block mb-1.5">Kundens mobilnummer</label>
@@ -1040,7 +1152,7 @@ function ActionPanel({
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-0.5">Belopp till terminal</p>
-                      <p className="text-2xl font-extrabold text-white">{DEAL.amountDisplay} kr</p>
+                      <p className="text-2xl font-extrabold text-white">{deal.amountDisplay} kr</p>
                       <p className="text-xs text-slate-500 mt-1 leading-relaxed">
                         Klicka nedan för att skicka beloppet.<br />Kunden blippar eller sätter in kortet.
                       </p>
@@ -1049,7 +1161,7 @@ function ActionPanel({
                   </div>
                 </div>
                 <Btn
-                  label={`Skicka ${DEAL.amountDisplay} kr till terminal`}
+                  label={`Skicka ${deal.amountDisplay} kr till terminal`}
                   icon="📡"
                   onClick={onInitiateTerminal}
                   loading={flowStep === 'initiating'}
@@ -1085,9 +1197,9 @@ function ActionPanel({
                   Dela nedanstående betalningsinformation med kunden. Verifiera mottagen betalning via knappen nedan.
                 </InfoBox>
                 <div className="bg-amber-50 border border-amber-100 rounded-xl divide-y divide-amber-100 overflow-hidden">
-                  <BankRow label="Bankgiro"      value={DEAL.bankgiro} mono />
-                  <BankRow label="OCR / Referens" value={DEAL.ocr}     mono />
-                  <BankRow label="Belopp"         value={`${DEAL.amountDisplay} kr`} bold />
+                  <BankRow label="Bankgiro"      value={deal.bankgiro} mono />
+                  <BankRow label="OCR / Referens" value={deal.ocr}     mono />
+                  <BankRow label="Belopp"         value={`${deal.amountDisplay} kr`} bold />
                   <BankRow label="Mottagare"      value={dealerName} />
                 </div>
                 <button
@@ -1219,7 +1331,7 @@ function ActionPanel({
 
 // ─── Terminal Waiting Animation ───────────────────────────────────────────────
 
-function TerminalWaiting() {
+function TerminalWaiting({ amountDisplay }: { amountDisplay: string }) {
   return (
     <div className="rounded-2xl bg-slate-900 p-5">
       <div className="flex flex-col items-center">
@@ -1227,7 +1339,7 @@ function TerminalWaiting() {
         <div className="w-32 h-44 bg-slate-800 rounded-2xl border-2 border-slate-700 shadow-xl flex flex-col items-center justify-start p-3 mb-4">
           {/* Screen */}
           <div className="w-full bg-[#0d1f0d] rounded-lg border border-green-900 p-2 mb-2">
-            <p className="text-green-400 text-[9px] font-mono text-center font-bold">{DEAL.amountDisplay} kr</p>
+            <p className="text-green-400 text-[9px] font-mono text-center font-bold">{amountDisplay} kr</p>
             <div className="flex items-center justify-center gap-1 mt-1">
               <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
               <p className="text-green-600 text-[7px] font-mono">VÄNTAR PÅ KORT</p>
