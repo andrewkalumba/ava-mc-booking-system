@@ -103,9 +103,10 @@ export default function PipelinePage() {
     l.bike.toLowerCase().includes(search.toLowerCase())
   );
 
-  const totalValue = leads
-    .filter(l => l.stage !== 'closed')
-    .reduce((sum, l) => sum + parseInt(l.value.replace(/\D/g, '')) * 1000, 0);
+  // Sum of all closed deals — reflects actual revenue booked through the pipeline
+  const closedValue = leads
+    .filter(l => l.stage === 'closed')
+    .reduce((sum, l) => sum + l.rawValue, 0);
 
   return (
     <div className="flex min-h-screen bg-[#f5f7fa]">
@@ -152,7 +153,7 @@ export default function PipelinePage() {
             <div className="ml-auto flex items-center gap-2 text-xs">
               <span className="text-slate-400">{t('pipelineValue')}</span>
               <span className="font-bold text-slate-900">
-                {(totalValue / 1_000_000).toFixed(1)}M kr
+                {(closedValue / 1_000_000).toFixed(1)}M kr
               </span>
             </div>
           </div>
@@ -163,9 +164,7 @@ export default function PipelinePage() {
           <div className="flex gap-4 p-5 md:p-8 min-w-max">
             {COLUMNS.map(col => {
               const colLeads = filtered.filter(l => l.stage === col.id);
-              const colValue = colLeads.reduce(
-                (sum, l) => sum + parseInt(l.value.replace(/\D/g, '')) * 1000, 0
-              );
+              const colValue = colLeads.reduce((sum, l) => sum + l.rawValue, 0);
               return (
                 <div key={col.id} className="w-72 flex flex-col gap-3 animate-fade-up">
                   {/* Column header */}

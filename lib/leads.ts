@@ -13,6 +13,7 @@ export interface Lead {
   name:     string;
   bike:     string;
   value:    string;   // display string e.g. "150k kr"
+  rawValue: number;   // numeric kr — use this for all calculations
   time:     string;   // display string e.g. "2h ago"
   status:   Status;
   verified: boolean;
@@ -45,11 +46,13 @@ function initials(name: string): string {
 }
 
 function mapDbToLead(row: Record<string, unknown>): Lead {
+  const rawValue = parseFloat(String(row.value ?? '0')) || 0;
   return {
     id:       row.id as number,
     name:     (row.name        as string) ?? '',
     bike:     (row.bike        as string) ?? '',
-    value:    formatValue(parseFloat(String(row.value ?? '0'))),
+    value:    formatValue(rawValue),
+    rawValue,
     time:     formatTime(row.created_at as string | null),
     status:   (row.lead_status as Status) ?? 'warm',
     verified: !!(row.personnummer),

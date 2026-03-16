@@ -255,12 +255,22 @@ export async function POST(req: Request) {
       if (cust) resolvedName = `${(cust as { first_name: string; last_name: string }).first_name} ${(cust as { first_name: string; last_name: string }).last_name}`.trim();
     }
 
-    // 3. If paid: first mark any pending invoice as paid, then create paid invoice
+    // 3. Sync lead.value with the actual deal amount so the kanban card shows the right amount
+    {
+      const { error: valErr } = await sb()
+        .from('leads')
+        .update({ value: totalAmount })
+        .eq('id', leadId)
+        .eq('dealership_id', dealershipId);
+      if (valErr) console.error('[payment/record] update lead value:', valErr.message);
+    }
+
+    // 4. If paid: first mark any pending invoice as paid, then create paid invoice
     if (status === 'paid') {
       await markPaid(leadId, dealershipId, paymentMethod);
     }
 
-    // 4. Create invoice (deduplication inside upsertInvoice)
+    // 5. Create invoice (deduplication inside upsertInvoice)
     const invoiceId = await upsertInvoice({
       dealershipId,
       leadId,
