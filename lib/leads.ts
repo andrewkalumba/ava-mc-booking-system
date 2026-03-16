@@ -243,3 +243,73 @@ export async function convertLeadToCustomer(
 
   return { customerId, created };
 }
+
+/**
+ * Find or create a customer record from a lead WITHOUT closing the lead.
+ * Used when a payment is initiated (pending state) so the customer appears
+ * in the customers list immediately, before the payment is confirmed.
+ */
+export async function upsertCustomerFromLead(
+  leadId: number,
+): Promise<{ customerId: number | null; created: boolean }> {
+  const dealershipId = getDealershipId();
+  if (!dealershipId) return { customerId: null, created: false };
+
+  const { data: lead } = await db()
+    .from('leads')
+    .select('*')
+    .eq('id', leadId)
+    .eq('dealership_id', dealershipId)
+    .maybeSingle();
+  if (!lead) return { customerId: null, created: false };
+
+  // Check by personnummer first, then email
+  let existingId: number | null = null;
+  if (lead.personnummer) {
+    const { data: byPnr } = await db()
+      .from('customers')
+      .select('id')
+      .eq('personnummer', lead.personnummer)
+      .eq('dealership_id', dealershipId)
+      .maybeSingle();
+    if (byPnr) existingId = (byPnr as { id: number }).id;
+  }
+  if (!existingId && lead.email) {
+    const { data: byEmail } = await db()
+      .from('customers')
+      .select('id')
+      .eq('email', lead.email)
+      .eq('dealership_id', dealershipId)
+      .maybeSingle();
+    if (byEmail) existingId = (byEmail as { id: number }).id;
+  }
+  if (existingId) return { customerId: existingId, created: false };
+
+  const nameParts = ((lead.name as string) ?? '').trim().split(/\s+/);
+  const firstName = nameParts[0] ?? '';
+  const lastName  = nameParts.slice(1).join(' ') || '—';
+  const { data: newCustomer, error: insertErr } = await db()
+    .from('customers')
+    .insert({
+      first_name:      firstName,
+      last_name:       lastName,
+      personnummer:    lead.personnummer || null,
+      email:           lead.email       || null,
+      phone:           lead.phone       || null,
+      address:         lead.address     || null,
+      city:            lead.city        || null,
+      source:          lead.source === 'BankID' ? 'BankID' : 'Manual',
+      bankid_verified: lead.source === 'BankID',
+      tag:             'New',
+      lifetime_value:  lead.value       || 0,
+      last_activity:   new Date().toISOString(),
+      dealership_id:   dealershipId,
+    })
+    .select('id')
+    .single();
+  if (!insertErr && newCustomer) {
+    return { customerId: (newCustomer as { id: number }).id, created: true };
+  }
+  if (insertErr) console.error('[leads] upsertCustomerFromLead:', insertErr.message);
+  return { customerId: null, created: false };
+}

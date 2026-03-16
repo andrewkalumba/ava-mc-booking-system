@@ -9,7 +9,7 @@ import Sidebar from '@/components/Sidebar';
 import PhoneInput from '@/components/PhoneInput';
 import { notify } from '@/lib/notifications';
 import { createInvoice, markInvoicePaid } from '@/lib/invoices';
-import { convertLeadToCustomer } from '@/lib/leads';
+import { convertLeadToCustomer, upsertCustomerFromLead } from '@/lib/leads';
 import { emit } from '@/lib/realtime';
 import { getDealerInfo } from '@/lib/dealer';
 import { getSupabaseBrowser } from '@/lib/supabase';
@@ -208,6 +208,42 @@ export default function AgreementPaymentPage() {
       message: `${deal.customer} — ${deal.amountDisplay} kr${selected ? ` ${tNotif('actions.paymentConfirmed.via')} ${selected.name}` : ''}`,
       href:    `/sales/leads/${id}/agreement/complete`,
     });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flowStep]);
+
+  // Create pending invoice + ensure customer exists as soon as payment is initiated
+  useEffect(() => {
+    if (flowStep !== 'waiting') return;
+    const vatAmount = Math.round(deal.amountSek - deal.amountSek / 1.25);
+    const method    = selected?.name ?? '—';
+
+    async function handlePending() {
+      // 1. Ensure the customer record exists (without closing the lead)
+      let customerId: number | undefined;
+      try {
+        const result = await upsertCustomerFromLead(Number(id));
+        customerId = result.customerId ?? undefined;
+      } catch { /* best-effort */ }
+
+      // 2. Create a pending invoice so it appears in the invoices list immediately
+      try {
+        await createInvoice({
+          leadId:        id,
+          customerId,
+          customerName:  deal.customer,
+          vehicle:       deal.vehicle,
+          agreementRef:  deal.agreementId,
+          totalAmount:   deal.amountSek,
+          vatAmount,
+          netAmount:     deal.amountSek - vatAmount,
+          paymentMethod: method,
+          status:        'pending',
+        });
+        emit({ type: 'data:refresh' });
+      } catch { /* best-effort */ }
+    }
+
+    handlePending();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [flowStep]);
 

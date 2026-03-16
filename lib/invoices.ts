@@ -109,14 +109,14 @@ export async function createInvoice(
   const dealershipId = getDealershipId();
   if (!dealershipId) throw new Error('Not authenticated: no dealership context');
 
-  // Deduplicate — don't create a second paid invoice for the same lead
-  if (data.status === 'paid' && data.leadId) {
+  // Deduplicate — don't create a second invoice with the same status for the same lead
+  if (data.leadId) {
     const { data: existing } = await db()
       .from('invoices')
       .select('*')
       .eq('lead_id', data.leadId)
       .eq('dealership_id', dealershipId)
-      .eq('status', 'paid')
+      .eq('status', data.status)
       .maybeSingle();
     if (existing) return mapDbToInvoice(existing as Record<string, unknown>);
   }
