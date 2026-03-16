@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createCheckout } from '@/lib/qliro/client';
+import { createCheckout, QliroOrderItem } from '@/lib/qliro/client';
 
 /** POST /api/qliro/checkout — create a Qliro One checkout */
 export async function POST(req: NextRequest) {
@@ -14,19 +14,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const orderItems: QliroOrderItem[] = orderLines;
+    const totalPrice = orderItems.reduce(
+      (sum: number, item: QliroOrderItem) => sum + item.PricePerItemIncVat * item.Quantity,
+      0,
+    );
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? '';
+
     const result = await createCheckout({
-      orderLines,
-      currency: currency ?? 'SEK',
-      country: country ?? 'SE',
-      merchantOrderId,
-      customer,
-      callbackUrl:  `${process.env.NEXT_PUBLIC_BASE_URL}/api/qliro/callback`,
-      successUrl:   `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
+      MerchantOrderId:         merchantOrderId,
+      MerchantReference:       merchantOrderId,
+      Currency:                currency ?? 'SEK',
+      Country:                 country  ?? 'SE',
+      Language:                'sv-SE',
+      OrderItems:              orderItems,
+      TotalPrice:              totalPrice,
+      Customer:                customer,
+      MerchantConfirmationUrl: `${baseUrl}/payment/success`,
+      MerchantNotificationUrl: `${baseUrl}/api/qliro/callback`,
     });
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('[Qliro POST checkout]', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[Qliro POST checkout]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
