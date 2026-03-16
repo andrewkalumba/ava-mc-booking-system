@@ -4,23 +4,29 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { useInventory } from '@/context/InventoryContext'
 import { AddSupplierModal } from '@/components/AddSupplierModal'
 import { supabase } from '@/lib/supabase'
+import { getDealershipId, getDealershipTag } from '@/lib/tenant'
 import type { InventoryCategory, MCType, Warehouse } from '@/utils/types'
 import type { SupplierRow } from '@/components/SupplierFormShared'
 
 // ─── ID generator ─────────────────────────────────────────────────────────────
+// IDs are company-scoped: MC-AVA-001, SP-AVA-001, ACC-AVA-001
+// The 3-char tag (derived from dealership name) ensures no collision across companies.
 
 function generateNextId(type: InventoryCategory, existingIds: string[]): string {
     const prefix = type === 'motorcycles' ? 'MC' : type === 'spareParts' ? 'SP' : 'ACC'
+    const tag = getDealershipTag()
+    const taggedPrefix = `${prefix}-${tag}-`
     const nums = existingIds
-        .filter((id) => id.startsWith(prefix + '-'))
-        .map((id) => parseInt(id.replace(prefix + '-', ''), 10))
+        .filter((id) => id.startsWith(taggedPrefix))
+        .map((id) => parseInt(id.replace(taggedPrefix, ''), 10))
         .filter((n) => !isNaN(n))
     const next = nums.length > 0 ? Math.max(...nums) + 1 : 1
-    return `${prefix}-${String(next).padStart(3, '0')}`
+    return `${taggedPrefix}${String(next).padStart(3, '0')}`
 }
 
 function supNum(n: number) {
-    return `SUP-${String(n).padStart(3, '0')}`
+    const tag = getDealershipTag()
+    return `SUP-${tag}-${String(n).padStart(3, '0')}`
 }
 
 // ─── Reusable field components ────────────────────────────────────────────────
@@ -87,9 +93,13 @@ export function AddItemModal({ onClose }: { onClose: () => void }) {
         return names
     }, [motorcycles, spareParts, accessories])
 
-    // Fetch manual vendors from Supabase and merge with context vendors
+    // Fetch manual vendors from Supabase (scoped to this dealership) and merge with context vendors
     useEffect(() => {
-        supabase.from('vendors').select('name').then(({ data }) => {
+        const dealershipId = getDealershipId()
+        const query = dealershipId
+            ? supabase.from('vendors').select('name').eq('dealership_id', dealershipId)
+            : supabase.from('vendors').select('name')
+        query.then(({ data }) => {
             const all = new Set(contextVendors)
             if (data) data.forEach((r) => r.name && all.add(r.name))
             setDbSuppliers([...all].filter(Boolean).sort())
@@ -234,6 +244,7 @@ export function AddItemModal({ onClose }: { onClose: () => void }) {
     async function handleSupplierSaved(s: SupplierRow) {
         await supabase.from('vendors').upsert({
             name:                    s.name,
+            dealership_id:           getDealershipId(),
             address:                 s.address,
             phone:                   s.phone,
             org_number:              s.orgNumber,
@@ -241,7 +252,7 @@ export function AddItemModal({ onClose }: { onClose: () => void }) {
             supplier_number:         s.supplierNumber,
             categories:              [],
             is_manual:               true,
-        }, { onConflict: 'name' })
+        }, { onConflict: 'name,dealership_id' })
         setDbSuppliers((prev) => [...prev, s.name].sort())
         setVendor(s.name)
         setShowAddSupplier(false)

@@ -13,7 +13,7 @@ export default function SettingsPage() {
   const [userRole, setUserRole] = useState<string>('');
 
   // Sections that require admin role to configure
-  const ADMIN_ONLY_IDS = ['payments', 'integrations', 'users', 'billing'];
+  const ADMIN_ONLY_IDS = ['payments', 'integrations', 'users', 'billing', 'email'];
 
   const SETTINGS_SECTIONS = [
     {
@@ -75,6 +75,16 @@ export default function SettingsPage() {
       live:     true,
       badge:    t('sections.billing.badge'),
       badgeCls: 'bg-green-100 text-green-700',
+    },
+    {
+      id:       'email',
+      icon:     '✉️',
+      title:    'Email Sending',
+      desc:     'Configure your SMTP credentials so PO emails go out from your own dealership email address.',
+      href:     '/settings/email',
+      live:     true,
+      badge:    'Admin',
+      badgeCls: 'bg-blue-100 text-blue-700',
     },
   ];
 

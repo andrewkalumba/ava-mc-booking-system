@@ -3,10 +3,11 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useInventory }   from '@/context/InventoryContext'
 import { supabase }       from '@/lib/supabase'
-import { getDealershipId } from '@/lib/tenant'
+import { getDealershipId, getDealershipTag } from '@/lib/tenant'
 import { vendorDetails }  from '@/data/vendors'
 import { POModal, STATUS_STYLE, formatCurrency, qtyKey, VendorItem } from '@/components/POModal'
 import { CreatePOModal, FlatInventoryItem } from '@/components/CreatePOModal'
+import { ImportPOModal } from '@/components/ImportPOModal'
 import { POLineItem, POStatus, PurchaseOrder } from '@/utils/types'
 
 const ALL_STATUSES: POStatus[] = ['Draft', 'Under Review', 'Reviewed', 'Sent', 'Received']
@@ -15,12 +16,14 @@ const ALL_STATUSES: POStatus[] = ['Draft', 'Under Review', 'Reviewed', 'Sent', '
 
 function generateNextPOId(allPOs: PurchaseOrder[]): string {
     const year = new Date().getFullYear()
+    const tag  = getDealershipTag()
     const nums = allPOs.map((po) => {
-        const m = po.id.match(/^PO-\d{4}-(\d+)$/)
-        return m ? parseInt(m[1], 10) : 0
+        const parts = po.id.split('-')
+        const n = parseInt(parts[parts.length - 1], 10)
+        return isNaN(n) ? 0 : n
     })
     const max = nums.length > 0 ? Math.max(...nums) : 0
-    return `PO-${year}-${String(max + 1).padStart(3, '0')}`
+    return `PO-${tag}-${year}-${String(max + 1).padStart(3, '0')}`
 }
 
 // ─── Summary cards ────────────────────────────────────────────────────────────
@@ -134,11 +137,14 @@ export default function PurchasePage() {
     const [selectedPO,        setSelectedPO]        = useState<PurchaseOrder | null>(null)
     const [qtyOverrides,      setQtyOverrides]      = useState<Record<string, number>>({})
     const [showCreatePO,      setShowCreatePO]      = useState(false)
+    const [showImportPO,      setShowImportPO]      = useState(false)
     const [userPOs,           setUserPOs]           = useState<PurchaseOrder[]>([])
     const [historicalPOs,     setHistoricalPOs]     = useState<PurchaseOrder[]>([])
     const [poStatusOverrides, setPoStatusOverrides] = useState<Record<string, POStatus>>({})
     const [poItemOverrides,   setPoItemOverrides]   = useState<Record<string, POLineItem[]>>({})
     const [poEtaOverrides,    setPoEtaOverrides]    = useState<Record<string, string>>({})
+    const [dealerSuppliers,   setDealerSuppliers]   = useState<string[]>([])
+    const [supplierEmails,    setSupplierEmails]    = useState<Record<string, string>>({})
 
     // Fetch POs from Supabase on mount; also load status overrides for auto-POs
     useEffect(() => {
@@ -178,14 +184,34 @@ export default function PurchasePage() {
             }))
             setHistoricalPOs(mapped)
         }
+
+        async function loadSuppliers() {
+            const dealershipId = getDealershipId()
+            if (!dealershipId) return
+            const { data } = await supabase
+                .from('vendors')
+                .select('name, email')
+                .eq('dealership_id', dealershipId)
+                .eq('is_manual', true)
+                .order('name')
+            if (data) {
+                setDealerSuppliers(data.map((r) => r.name))
+                const emailMap: Record<string, string> = {}
+                data.forEach((r) => { if (r.email) emailMap[r.name] = r.email })
+                setSupplierEmails(emailMap)
+            }
+        }
+
         loadHistoricalPOs()
+        loadSuppliers()
     }, [])
 
     const autoIds = useMemo(() => new Set(autoPOs.map((p) => p.id)), [autoPOs])
-    // Deduplicate: auto-POs come from live inventory; filter them out of historicalPOs to avoid duplicate keys
+    const userIds = useMemo(() => new Set(userPOs.map((p) => p.id)), [userPOs])
+    // Deduplicate: auto-POs and user-created POs (optimistic) take priority over DB-loaded copies
     const allPOs  = useMemo<PurchaseOrder[]>(
-        () => [...autoPOs, ...userPOs, ...historicalPOs.filter((p) => !autoIds.has(p.id))],
-        [autoPOs, userPOs, historicalPOs, autoIds],
+        () => [...autoPOs, ...userPOs, ...historicalPOs.filter((p) => !autoIds.has(p.id) && !userIds.has(p.id))],
+        [autoPOs, userPOs, historicalPOs, autoIds, userIds],
     )
 
     const allPOsResolved = useMemo<PurchaseOrder[]>(
@@ -378,12 +404,20 @@ export default function PurchasePage() {
                             Click any row to open the full PO. Auto POs update live with inventory stock.
                         </p>
                     </div>
-                    <button
-                        onClick={() => setShowCreatePO(true)}
-                        className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                    >
-                        + Create PO
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setShowImportPO(true)}
+                            className="bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5"
+                        >
+                            ⬆ Import Excel
+                        </button>
+                        <button
+                            onClick={() => setShowCreatePO(true)}
+                            className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                        >
+                            + Create PO
+                        </button>
+                    </div>
                 </div>
 
                 <SummaryCards allPOs={allPOsResolved} filtered={filtered} />
@@ -414,10 +448,26 @@ export default function PurchasePage() {
                 {/* PO table */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                     {filtered.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-40 text-gray-400">
-                            <span className="text-3xl mb-2">📭</span>
-                            <p className="text-sm">No purchase orders match your filter</p>
-                        </div>
+                        allPOs.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center h-64 gap-4">
+                                <span className="text-5xl">📦</span>
+                                <div className="text-center">
+                                    <p className="text-gray-700 font-semibold">No purchase orders yet</p>
+                                    <p className="text-gray-400 text-sm mt-1">Import from Excel or create a PO manually</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowImportPO(true)}
+                                    className="bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2"
+                                >
+                                    ⬆ Import from Excel
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+                                <span className="text-3xl mb-2">📭</span>
+                                <p className="text-sm">No purchase orders match your filter</p>
+                            </div>
+                        )
                     ) : (
                         <table className="w-full text-sm">
                             <thead>
@@ -478,11 +528,23 @@ export default function PurchasePage() {
                 </div>
             </div>
 
+            {/* Import PO modal */}
+            {showImportPO && (
+                <ImportPOModal
+                    existingPOs={allPOs}
+                    onImported={(newPOs) => {
+                        setUserPOs((prev) => [...newPOs, ...prev])
+                    }}
+                    onClose={() => setShowImportPO(false)}
+                />
+            )}
+
             {/* Create PO modal — see components/CreatePOModal.tsx */}
             {showCreatePO && (
                 <CreatePOModal
                     nextPOId={nextPOId}
                     allInventoryItems={allInventoryItems}
+                    suppliers={dealerSuppliers}
                     onSave={handleSavePO}
                     onClose={() => setShowCreatePO(false)}
                 />
@@ -500,6 +562,7 @@ export default function PurchasePage() {
                     onReviewed={(items, eta) => handleReviewedPO(selectedPO.id, items, eta)}
                     vendorItems={selectedVendorItems}
                     freeShippingThreshold={vendorDetails[selectedPO.vendor]?.freeShippingThreshold}
+                    vendorEmailOverride={supplierEmails[selectedPO.vendor]}
                 />
             )}
         </div>

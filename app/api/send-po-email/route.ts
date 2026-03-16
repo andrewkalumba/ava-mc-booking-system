@@ -1,39 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
+import { getSupabaseServer } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
-    const { toEmail, poId, vendorName, poDate, eta, pdfBase64 } = await req.json()
+    const { toEmail, poId, vendorName, poDate, eta, pdfBase64, fromName, replyTo, dealerPhone, dealershipId } = await req.json()
 
     if (!toEmail || !poId || !pdfBase64) {
         return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
-    const user = process.env.EMAIL_USER
-    const pass = process.env.EMAIL_PASS
+    // ── Try to load dealer's own SMTP credentials from Supabase ──────────────
+    let smtpUser: string | undefined
+    let smtpPass: string | undefined
+    let smtpHost = 'smtp.gmail.com'
+    let smtpPort = 587
 
-    if (!user || !pass) {
+    if (dealershipId) {
+        const db = getSupabaseServer()
+        const { data: dealer } = await db
+            .from('dealerships')
+            .select('smtp_user, smtp_pass, smtp_host, smtp_port')
+            .eq('id', dealershipId)
+            .single()
+
+        if (dealer?.smtp_user && dealer?.smtp_pass) {
+            smtpUser = dealer.smtp_user
+            smtpPass = dealer.smtp_pass
+            if (dealer.smtp_host) smtpHost = dealer.smtp_host
+            if (dealer.smtp_port) smtpPort = dealer.smtp_port
+        }
+    }
+
+    // ── Fall back to platform-level credentials ───────────────────────────────
+    const finalUser = smtpUser ?? process.env.EMAIL_USER
+    const finalPass = smtpPass ?? process.env.EMAIL_PASS
+
+    if (!finalUser || !finalPass) {
         return NextResponse.json(
-            { error: 'Email credentials not configured. Add EMAIL_USER and EMAIL_PASS to .env.local' },
+            { error: 'Email credentials not configured. Set up email in Settings or add EMAIL_USER and EMAIL_PASS to .env.local' },
             { status: 500 },
         )
     }
 
-    const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: { user, pass },
-    })
+    const isGmail = smtpHost === 'smtp.gmail.com'
+    const transporter = nodemailer.createTransport(
+        isGmail
+            ? { service: 'gmail', auth: { user: finalUser, pass: finalPass } }
+            : { host: smtpHost, port: smtpPort, secure: smtpPort === 465, auth: { user: finalUser, pass: finalPass } }
+    )
 
     // pdfBase64 comes in as a data URI: "data:application/pdf;base64,<base64data>"
     const base64Data = pdfBase64.split(',')[1]
 
-    const etaLine = eta && eta !== '—' ? `Expected Delivery: ${eta}` : ''
+    const etaLine    = eta && eta !== '—' ? `Expected Delivery: ${eta}` : ''
+    const senderName = fromName || 'Procurement'
+    // Reply-To is the dealer's own email so vendor replies land in the right inbox
+    const replyToAddr = replyTo || finalUser
 
     await transporter.sendMail({
-        from: `"AVA Motorcycle Centre Procurement" <${user}>`,
-        to: toEmail,
-        replyTo: user,
-        subject: `[Purchase Order] ${poId} from AVA Motorcycle Centre`,
-        // Plain-text version — helps avoid spam filters
+        from:    `"${senderName} Procurement" <${finalUser}>`,
+        to:      toEmail,
+        replyTo: replyToAddr,
+        subject: `[Purchase Order] ${poId} from ${senderName}`,
         text: [
             `Purchase Order: ${poId}`,
             `Date: ${poDate}`,
@@ -41,14 +69,15 @@ export async function POST(req: NextRequest) {
             '',
             `Dear ${vendorName},`,
             '',
-            `Please find attached Purchase Order ${poId} from AVA Motorcycle Centre.`,
+            `Please find attached Purchase Order ${poId} from ${senderName}.`,
             `Kindly confirm receipt and advise on stock availability at your earliest convenience.`,
             '',
             etaLine,
             '',
-            'AVA Motorcycle Centre',
+            senderName,
             'Procurement Department',
-            'Tel: +60 3-XXXX XXXX',
+            dealerPhone ? `Tel: ${dealerPhone}` : '',
+            replyToAddr !== finalUser ? `Email: ${replyToAddr}` : '',
         ].filter(Boolean).join('\n'),
         html: `
             <!DOCTYPE html>
@@ -79,9 +108,10 @@ export async function POST(req: NextRequest) {
                         </p>
                         <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
                         <p style="margin:0;color:#6b7280;font-size:13px;line-height:1.8;">
-                          <strong style="color:#1e3a5f;">AVA Motorcycle Centre</strong><br/>
+                          <strong style="color:#1e3a5f;">${senderName}</strong><br/>
                           Procurement Department<br/>
-                          Tel: +60 3-XXXX XXXX
+                          ${dealerPhone ? `Tel: ${dealerPhone}<br/>` : ''}
+                          ${replyToAddr !== finalUser ? `Email: ${replyToAddr}` : ''}
                         </p>
                       </td>
                     </tr>
@@ -89,7 +119,7 @@ export async function POST(req: NextRequest) {
                     <tr>
                       <td style="background:#f9fafb;padding:14px 32px;border-top:1px solid #e5e7eb;">
                         <p style="margin:0;color:#9ca3af;font-size:11px;">
-                          This is an automated email from AVA Motorcycle Centre's procurement system.
+                          This is an automated email sent on behalf of ${senderName}.
                           The purchase order PDF is attached to this email.
                         </p>
                       </td>

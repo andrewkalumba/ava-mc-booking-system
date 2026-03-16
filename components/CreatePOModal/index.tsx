@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { vendorDetails } from '@/data/vendors'
 import { formatCurrency } from '@/components/POModal'
 import { PurchaseOrder, POLineItem } from '@/utils/types'
 
@@ -43,16 +42,19 @@ function emptyRow(): DraftRow {
 export function CreatePOModal({
     nextPOId,
     allInventoryItems,
+    suppliers,
     onSave,
     onClose,
 }: {
     nextPOId:          string
     allInventoryItems: FlatInventoryItem[]
+    /** Supplier names scoped to the current dealership — loaded from Supabase */
+    suppliers:         string[]
     onSave:            (po: PurchaseOrder) => void
     onClose:           () => void
 }) {
     const todayStr   = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-    const allVendors = useMemo(() => Object.keys(vendorDetails).sort(), [])
+    const allVendors = useMemo(() => [...suppliers].sort(), [suppliers])
 
     const [vendorSearch,  setVendorSearch]  = useState('')
     const [vendor,        setVendor]        = useState('')
@@ -60,7 +62,7 @@ export function CreatePOModal({
     const [rows,          setRows]          = useState<DraftRow[]>([emptyRow(), emptyRow(), emptyRow()])
     const [deliveryDate,  setDeliveryDate]  = useState('')
 
-    // Items belonging to the selected supplier
+    // Items matching the selected supplier (used for the badge only)
     const vendorItems = useMemo(
         () => vendor ? allInventoryItems.filter((i) => i.vendor === vendor) : [],
         [vendor, allInventoryItems],
@@ -235,13 +237,13 @@ export function CreatePOModal({
                                 <span className="text-xs text-gray-400 italic">Select a supplier first to see their items</span>
                             )}
                             {vendor && vendorItems.length === 0 && (
-                                <span className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
-                                    ⚠ No inventory items found for this supplier
+                                <span className="text-xs text-gray-500 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-full">
+                                    No items linked to this supplier — search all inventory below
                                 </span>
                             )}
                             {vendor && vendorItems.length > 0 && (
                                 <span className="text-xs text-green-600 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full">
-                                    {vendorItems.length} item{vendorItems.length !== 1 ? 's' : ''} available
+                                    {vendorItems.length} item{vendorItems.length !== 1 ? 's' : ''} linked to supplier
                                 </span>
                             )}
                         </div>
@@ -261,7 +263,9 @@ export function CreatePOModal({
                                 <tbody className="divide-y divide-gray-100">
                                     {rows.map((row, idx) => {
                                         const q = row.itemSearch.toLowerCase()
-                                        const filteredItems = vendorItems.filter(
+                                        // Search ALL inventory items (not just supplier-matched ones)
+                                        // so items linked to slightly different vendor names still appear
+                                        const filteredItems = (q ? allInventoryItems : vendorItems).filter(
                                             (item) =>
                                                 !q ||
                                                 item.name.toLowerCase().includes(q) ||
@@ -278,7 +282,7 @@ export function CreatePOModal({
                                                 <td className="px-4 py-3 relative">
                                                     <input
                                                         type="text"
-                                                        placeholder={vendor ? 'Search item…' : 'Select supplier first'}
+                                                        placeholder={vendor ? 'Search any inventory item…' : 'Select supplier first'}
                                                         disabled={!vendor}
                                                         value={row.itemSearch}
                                                         onFocus={() => vendor && updateRow(row.rowId, { itemDropdownOpen: true })}
