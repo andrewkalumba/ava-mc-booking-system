@@ -8,10 +8,11 @@ export async function GET(
 ) {
   try {
     const { orderId } = await params;
-    const result = await getOrderStatus(orderId);
+    const result = await getOrderStatus(Number(orderId));
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('[Qliro GET order]', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[Qliro GET order]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

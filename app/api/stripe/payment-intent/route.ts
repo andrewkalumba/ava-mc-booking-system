@@ -3,12 +3,12 @@ import { createPaymentIntent } from '@/lib/stripe/client';
 
 /**
  * POST /api/stripe/payment-intent — create a Stripe Payment Intent
- * Body: { amount, currency?, customerId?, description? }
+ * Body: { amount, currency?, customer?, description? }
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { amount, currency, customerId, description } = body;
+    const { amount, currency, customer, description } = body;
 
     if (!amount) {
       return NextResponse.json({ error: 'amount is required' }, { status: 400 });
@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     const result = await createPaymentIntent({
       amount,
       currency:   currency ?? 'sek',
-      customerId,
+      customer,
       description,
     });
 
@@ -27,8 +27,9 @@ export async function POST(req: NextRequest) {
       clientSecret: result.client_secret,
       status:       result.status,
     });
-  } catch (error: any) {
-    console.error('[Stripe POST payment-intent]', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[Stripe POST payment-intent]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

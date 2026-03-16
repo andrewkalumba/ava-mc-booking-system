@@ -154,7 +154,7 @@ export async function initiateDeposit(
 export async function refundDeposit(
   params: TrustlyRefundParams,
 ): Promise<TrustlyRefundResponse> {
-  return trustlyCall<TrustlyRefundResponse>('Refund', params);
+  return trustlyCall<TrustlyRefundResponse>('Refund', params as unknown as Record<string, unknown>);
 }
 
 /**

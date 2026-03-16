@@ -1,20 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { captureOrder } from '@/lib/qliro/client';
 
-/** POST /api/qliro/order/[orderId]/capture — Body: { amount } */
+/** POST /api/qliro/order/[orderId]/capture */
 export async function POST(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ orderId: string }> },
 ) {
   try {
     const { orderId } = await params;
-    const { amount } = await req.json();
-    if (!amount) return NextResponse.json({ error: 'amount is required' }, { status: 400 });
-
-    const result = await captureOrder(orderId, amount);
+    const result = await captureOrder(Number(orderId));
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('[Qliro capture]', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[Qliro capture]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

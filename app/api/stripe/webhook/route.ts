@@ -9,7 +9,6 @@ import { insertWebhookEvent } from '@/lib/webhookStore';
  */
 export async function POST(req: NextRequest) {
   const sig = req.headers.get('stripe-signature') ?? '';
-  const secret = process.env.STRIPE_WEBHOOK_SECRET ?? '';
 
   let body: string;
   try {
@@ -18,11 +17,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Could not read body' }, { status: 400 });
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let event: any;
   try {
-    event = constructWebhookEvent(body, sig, secret);
-  } catch (err: any) {
-    console.error('[Stripe webhook] Signature verification failed:', err.message);
+    event = constructWebhookEvent(body, sig);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[Stripe webhook] Signature verification failed:', msg);
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
   }
 

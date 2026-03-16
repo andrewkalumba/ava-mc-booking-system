@@ -76,7 +76,7 @@ export type SwishPaymentStatus =
 
 export interface SwishPaymentRequest {
   callbackUrl:    string;           // your webhook — Swish POSTs status updates here
-  payeeAlias:     string;           // your Swish number (SWISH_PAYEE_ALIAS)
+  payeeAlias?:    string;           // overridden by SWISH_PAYEE_ALIAS env var in createPaymentRequest
   amount:         string;           // in SEK, e.g. "150.00"
   currency:       'SEK';
   payerAlias?:    string;           // customer's Swish number (for instore M-commerce)
@@ -100,7 +100,7 @@ export interface SwishPaymentResponse {
 
 export interface SwishRefundRequest {
   callbackUrl:            string;
-  payerAlias:             string;    // your Swish number (the merchant)
+  payerAlias?:            string;    // overridden by SWISH_PAYEE_ALIAS env var in createRefund
   amount:                 string;    // in SEK
   currency:               'SEK';
   originalPaymentReference: string;  // the id from the original payment

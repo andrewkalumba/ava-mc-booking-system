@@ -47,13 +47,8 @@ async function getAgent() {
 
 async function bankidFetch<T = unknown>(path: string, body: Record<string, unknown>): Promise<T> {
   const agent = await getAgent();
-  // @ts-expect-error — agent is Node.js specific, not in standard fetch types
-  const res = await fetch(`${BASE_URL}${path}`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify(body),
-    agent,
-  });
+  const init = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), agent } as unknown as RequestInit;
+  const res = await fetch(`${BASE_URL}${path}`, init);
 
   if (!res.ok) {
     const json = await res.json().catch(() => ({})) as { errorCode?: string; details?: string };

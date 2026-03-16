@@ -15,15 +15,17 @@ export async function POST(req: NextRequest) {
     }
 
     const refundId = await createRefund({
-      originalPaymentId,
-      amount,
+      originalPaymentReference: originalPaymentId,
+      amount:      String(amount),
+      currency:    'SEK',
       message:     message ?? 'Refund',
       callbackUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/swish/callback`,
     });
 
     return NextResponse.json({ refundId });
-  } catch (error: any) {
-    console.error('[Swish POST refund]', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[Swish POST refund]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

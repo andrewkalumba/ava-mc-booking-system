@@ -13,10 +13,11 @@ export async function POST(
       return NextResponse.json({ error: 'paymentIntentId is required' }, { status: 400 });
     }
 
-    const result = await processTerminalPayment(readerId, paymentIntentId);
+    const result = await processTerminalPayment({ reader: readerId, payment_intent: paymentIntentId });
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('[Stripe terminal process]', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[Stripe terminal process]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

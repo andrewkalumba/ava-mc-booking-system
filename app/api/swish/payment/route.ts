@@ -24,11 +24,11 @@ export async function POST(req: NextRequest) {
     if (MOCK) {
       const paymentId = 'MOCK' + Math.random().toString(36).slice(2, 14).toUpperCase();
       mockSwishStore.set(paymentId, {
-        status:     'CREATED',
+        status:    'CREATED',
         payerAlias,
         amount,
         orderId,
-        createdAt:  Date.now(),
+        createdAt: Date.now(),
       });
       // Auto-transition to PAID after 3 seconds (simulates customer approving in app)
       setTimeout(() => mockSwishStore.paid(paymentId), 3000);
@@ -37,12 +37,11 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Live mode ─────────────────────────────────────────────────────────────
-    // Use NEXT_PUBLIC_BASE_URL if set, otherwise derive from request origin
     const origin = process.env.NEXT_PUBLIC_BASE_URL ?? new URL(req.url).origin;
 
     const paymentId = await createPaymentRequest({
       payerAlias,
-      amount,
+      amount:                String(amount),
       currency:              (currency ?? 'SEK') as 'SEK',
       message:               message ?? orderId,
       payeePaymentReference: orderId,
@@ -51,8 +50,9 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Swish] Payment request created: ${paymentId}`);
     return NextResponse.json({ paymentId });
-  } catch (error: any) {
-    console.error('[Swish POST payment]', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[Swish POST payment]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

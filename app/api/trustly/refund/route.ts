@@ -12,10 +12,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = await refundDeposit(orderId, amount);
+    const result = await refundDeposit({
+      OrderID:  String(orderId),
+      Amount:   String(amount),
+      Currency: 'SEK',
+    });
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('[Trustly POST refund]', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[Trustly POST refund]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

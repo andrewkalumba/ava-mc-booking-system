@@ -8,10 +8,11 @@ export async function POST(
 ) {
   try {
     const { orderId } = await params;
-    await cancelOrder(orderId);
+    await cancelOrder(Number(orderId));
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error('[Qliro cancel]', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[Qliro cancel]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

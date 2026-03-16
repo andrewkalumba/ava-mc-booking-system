@@ -111,7 +111,7 @@ export interface QliroRefundRequest {
 export async function createCheckout(
   params: QliroCreateCheckoutRequest,
 ): Promise<QliroCheckoutResponse> {
-  return qliroFetch<QliroCheckoutResponse>('/api/checkout', params);
+  return qliroFetch<QliroCheckoutResponse>('/api/checkout', params as unknown as Record<string, unknown>);
 }
 
 /**
@@ -142,7 +142,7 @@ export async function cancelOrder(orderId: number): Promise<{ Success: boolean }
  * Refund a captured order (partial or full).
  */
 export async function refundOrder(params: QliroRefundRequest): Promise<{ Success: boolean }> {
-  return qliroFetch('/api/order/refund', params);
+  return qliroFetch('/api/order/refund', params as unknown as Record<string, unknown>);
 }
 
 /**

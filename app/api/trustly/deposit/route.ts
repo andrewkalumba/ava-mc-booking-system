@@ -3,7 +3,7 @@ import { initiateDeposit } from '@/lib/trustly/client';
 
 /**
  * POST /api/trustly/deposit — initiate a Trustly instant bank deposit
- * Body: { userId, amount, currency?, orderId, notificationUrl?, successUrl?, failUrl? }
+ * Body: { userId, amount, currency?, orderId }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -17,20 +17,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const base = process.env.NEXT_PUBLIC_BASE_URL ?? '';
     const result = await initiateDeposit({
-      userId,
-      amount,
-      currency:        currency ?? 'SEK',
-      orderId,
-      notificationUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/api/trustly/callback`,
-      successUrl:      `${process.env.NEXT_PUBLIC_BASE_URL}/payment/success`,
-      failUrl:         `${process.env.NEXT_PUBLIC_BASE_URL}/payment/failed`,
+      EndUserID:       String(userId),
+      MessageID:       String(orderId),
+      Amount:          String(amount),
+      Currency:        currency ?? 'SEK',
+      Locale:          'sv_SE',
+      Country:         'SE',
+      NotificationURL: `${base}/api/trustly/callback`,
+      SuccessURL:      `${base}/payment/success`,
+      FailURL:         `${base}/payment/failed`,
     });
 
     console.log(`[Trustly] Deposit initiated — orderId: ${orderId}`);
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('[Trustly POST deposit]', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[Trustly POST deposit]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

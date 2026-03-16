@@ -9,10 +9,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'paymentIntentId is required' }, { status: 400 });
     }
 
-    const result = await refundPayment(paymentIntentId, amount);
+    const result = await refundPayment({ payment_intent: paymentIntentId, amount });
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('[Stripe POST refund]', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[Stripe POST refund]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
