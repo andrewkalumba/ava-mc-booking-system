@@ -26,11 +26,13 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Next.js HMR needs unsafe-eval in dev
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob:",
-      "font-src 'self'",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+      // unsafe-eval needed for Next.js HMR; vercel.live for preview toolbar
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live",
+      "style-src 'self' 'unsafe-inline' https://vercel.live",
+      "img-src 'self' data: blob: https://vercel.live https://*.vercel.com",
+      "font-src 'self' https://vercel.live",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vercel.live wss://ws-us3.pusher.com",
+      "frame-src https://vercel.live",
       "frame-ancestors 'none'",
     ].join('; '),
   },

@@ -7,13 +7,15 @@ import { initiateAuth } from '@/lib/bankid_pay/client';
  */
 export async function POST(req: NextRequest) {
   try {
-    const { personalNumber, endUserIp } = await req.json();
+    const { endUserIp } = await req.json();
     const ip = endUserIp ?? req.headers.get('x-forwarded-for') ?? '127.0.0.1';
 
-    const result = await initiateAuth({ personalNumber, endUserIp: ip });
+    // BankID v6.0 removed personalNumber from auth requests
+    const result = await initiateAuth(ip);
     return NextResponse.json(result);
-  } catch (error: any) {
-    console.error('[BankID Pay auth]', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : String(error);
+    console.error('[BankID Pay auth]', msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
