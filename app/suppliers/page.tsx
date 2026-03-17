@@ -14,7 +14,7 @@ import { getDealershipId, getDealershipTag } from '@/lib/tenant'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STATUS_ORDER = ['Under Review', 'Draft', 'Reviewed', 'Sent', 'Received']
+const STATUS_ORDER = ['Draft', 'Reviewed', 'Sent', 'Received']
 
 function supNum(n: number) {
     const tag = getDealershipTag()

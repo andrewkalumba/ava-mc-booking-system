@@ -20,11 +20,10 @@ export function qtyKey(poId: string, inventoryId: string) {
 }
 
 export const STATUS_STYLE: Record<POStatus, { dot: string; badge: string }> = {
-    'Draft':        { dot: 'bg-gray-400',   badge: 'bg-gray-100 text-gray-600' },
-    'Under Review': { dot: 'bg-amber-500',  badge: 'bg-amber-50 text-amber-700 border border-amber-200' },
-    'Reviewed':     { dot: 'bg-teal-500',   badge: 'bg-teal-50 text-teal-700 border border-teal-200' },
-    'Sent':         { dot: 'bg-purple-500', badge: 'bg-purple-50 text-purple-700' },
-    'Received':     { dot: 'bg-green-500',  badge: 'bg-green-50 text-green-700' },
+    'Draft':    { dot: 'bg-gray-400',   badge: 'bg-gray-100 text-gray-600' },
+    'Reviewed': { dot: 'bg-teal-500',   badge: 'bg-teal-50 text-teal-700 border border-teal-200' },
+    'Sent':     { dot: 'bg-purple-500', badge: 'bg-purple-50 text-purple-700' },
+    'Received': { dot: 'bg-green-500',  badge: 'bg-green-50 text-green-700' },
 }
 
 // Vendor item shape passed from the page
@@ -251,7 +250,7 @@ export function POModal({
 
         const tableRows = editedItems.map((li) => [
             li.articleNumber,
-            li.name,
+            li.size ? `${li.name}\nSize: ${li.size}` : li.name,
             String(li.orderQty),
             formatCurrency(li.unitCost),
             formatCurrency(li.lineTotal),
@@ -413,7 +412,7 @@ export function POModal({
                     <div>
                         <div className="flex items-center gap-3 mb-1">
                             <h2 className="text-xs font-bold uppercase tracking-widest text-gray-400">
-                                Purchase Order
+                              Purchase Order
                             </h2>
                             {isAuto && (
                                 <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">
@@ -526,8 +525,8 @@ export function POModal({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
-                                    {displayItems.map((li) => (
-                                        <tr key={li.inventoryId} className="hover:bg-orange-50 transition-colors">
+                                    {displayItems.map((li, idx) => (
+                                        <tr key={`${li.inventoryId}-${idx}`} className="hover:bg-orange-50 transition-colors">
                                             <td className="px-4 py-3 font-mono text-xs text-gray-500">{li.articleNumber}</td>
                                             <td className="px-4 py-3">
                                                 <div className="font-semibold text-gray-800 text-sm">{li.name}</div>
@@ -637,7 +636,7 @@ export function POModal({
                         }`}>
                             {emailStatus === 'sent'
                                 ? `✓ Email sent to ${vendorEmail} — status updated to Sent`
-                                : '✗ Failed to send — check EMAIL_USER / EMAIL_PASS in .env.local'}
+                                : '✗ Failed to send — check RESEND_API_KEY + RESEND_FROM_EMAIL in .env.local'}
                         </div>
                     )}
 

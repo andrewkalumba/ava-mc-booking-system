@@ -28,7 +28,7 @@ const PO_COLS: Record<string, string> = {
     'note':         'notes',
 }
 
-const VALID_STATUSES: POStatus[] = ['Draft', 'Under Review', 'Reviewed', 'Sent', 'Received']
+const VALID_STATUSES: POStatus[] = ['Draft', 'Reviewed', 'Sent', 'Received']
 
 type ParsedPO = {
     id?:        string

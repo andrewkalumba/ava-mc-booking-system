@@ -447,7 +447,7 @@ export default function InventoryPage() {
         activeTab === 'motorcycles' ? motorcycles :
         activeTab === 'spareParts'  ? spareParts  : accessories
 
-    const pendingPOs = autoPOs.filter((p) => p.status === 'Under Review').length
+    const pendingPOs = autoPOs.filter((p) => p.status === 'Draft').length
 
     return (
         <div className="lg:ml-64 min-h-screen p-6 flex flex-col">

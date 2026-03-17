@@ -165,7 +165,8 @@ export default function Sidebar() {
         { icon: '🏍', label: t('navigation.inventory'),       href: '/inventory',  roles: ['admin', 'sales', 'service'] },
         { icon: '📦', label: t('navigation.purchaseOrders'), href: '/purchase',   roles: ['admin', 'sales', 'service'] },
         { icon: '🏭', label: t('navigation.suppliers'),       href: '/suppliers',  roles: ['admin', 'sales', 'service'] },
-        { icon: '📧', label: t('navigation.purchaseinvoices'),    href: '/purchaseinvoice', roles: ['admin', 'sales', 'service'] },
+        { icon: '📧', label: t('navigation.purchaseinvoices'),    href: '/purchaseinvoice',  roles: ['admin', 'sales', 'service'] },
+        { icon: '📬', label: 'Goods Receipts',                    href: '/goods-receipts',   roles: ['admin', 'sales', 'service'] },
       ],
     },
     {
