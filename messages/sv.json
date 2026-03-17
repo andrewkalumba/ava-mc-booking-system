@@ -633,6 +633,25 @@
         "desc": "Hantera ditt prenumerationsplan, fakturor och betalningsmetod.",
         "badge": "Live"
       }
+    },
+    "verify": {
+      "title": "Verifiera din identitet",
+      "subtitle": "Bekräfta vem du är innan du öppnar inställningar",
+      "recommended": "Rekommenderas",
+      "tabs": {
+        "bankid": "BankID",
+        "personnummer": "Personnummer",
+        "email": "E-post"
+      },
+      "bankidDesc": "Det säkraste och snabbaste alternativet. Scanna med din BankID-app.",
+      "bankidBtn": "Öppna BankID",
+      "pnrLabel": "Personnummer",
+      "pnrPlaceholder": "ÅÅÅÅMMDD-XXXX",
+      "emailLabel": "E-postadress",
+      "emailPlaceholder": "din@epost.se",
+      "verifyBtn": "Verifiera",
+      "errorMismatch": "Felaktigt — försök igen",
+      "errorNoData": "Inte registrerat — använd BankID"
     }
   },
   "pages": {

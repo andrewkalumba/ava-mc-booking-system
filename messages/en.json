@@ -633,6 +633,25 @@
         "desc": "Manage your subscription plan, invoices, and payment method.",
         "badge": "Live"
       }
+    },
+    "verify": {
+      "title": "Verify your identity",
+      "subtitle": "Confirm who you are before accessing settings",
+      "recommended": "Recommended",
+      "tabs": {
+        "bankid": "BankID",
+        "personnummer": "Personnummer",
+        "email": "Email"
+      },
+      "bankidDesc": "The most secure and fastest method. Scan with your BankID app.",
+      "bankidBtn": "Open BankID",
+      "pnrLabel": "Personal identity number",
+      "pnrPlaceholder": "YYYYMMDD-XXXX",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "your@email.com",
+      "verifyBtn": "Verify",
+      "errorMismatch": "Incorrect — please try again",
+      "errorNoData": "Not on file — use BankID instead"
     }
   },
   "pages": {

@@ -633,6 +633,25 @@
         "desc": "إدارة خطة الاشتراك والفواتير وطريقة الدفع.",
         "badge": "مباشر"
       }
+    },
+    "verify": {
+      "title": "تحقق من هويتك",
+      "subtitle": "أكد هويتك قبل الوصول إلى الإعدادات",
+      "recommended": "موصى به",
+      "tabs": {
+        "bankid": "بطاقة البنك",
+        "personnummer": "رقم الهوية",
+        "email": "البريد الإلكتروني"
+      },
+      "bankidDesc": "الطريقة الأكثر أماناً وسرعة. امسح ضوئياً باستخدام تطبيق BankID.",
+      "bankidBtn": "فتح BankID",
+      "pnrLabel": "رقم الهوية الشخصية",
+      "pnrPlaceholder": "YYYYMMDD-XXXX",
+      "emailLabel": "عنوان البريد الإلكتروني",
+      "emailPlaceholder": "بريدك@example.com",
+      "verifyBtn": "تحقق",
+      "errorMismatch": "غير صحيح — يرجى المحاولة مرة أخرى",
+      "errorNoData": "غير مسجل — استخدم BankID"
     }
   },
   "pages": {

@@ -633,6 +633,25 @@
         "desc": "Administrer din abonnementsplan, fakturaer og betalingsmetode.",
         "badge": "Live"
       }
+    },
+    "verify": {
+      "title": "Bekræft din identitet",
+      "subtitle": "Bekræft hvem du er, inden du åbner indstillinger",
+      "recommended": "Anbefalet",
+      "tabs": {
+        "bankid": "BankID",
+        "personnummer": "CPR-nummer",
+        "email": "E-mail"
+      },
+      "bankidDesc": "Den mest sikre og hurtigste metode. Scan med din BankID-app.",
+      "bankidBtn": "Åbn BankID",
+      "pnrLabel": "CPR-nummer",
+      "pnrPlaceholder": "DDMMÅÅ-XXXX",
+      "emailLabel": "E-mailadresse",
+      "emailPlaceholder": "din@email.dk",
+      "verifyBtn": "Bekræft",
+      "errorMismatch": "Forkert — prøv igen",
+      "errorNoData": "Ikke registreret — brug BankID"
     }
   },
   "pages": {

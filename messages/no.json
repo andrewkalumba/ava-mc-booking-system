@@ -633,6 +633,25 @@
         "desc": "Administrer ditt abonnementsplan, fakturaer og betalingsmetode.",
         "badge": "Live"
       }
+    },
+    "verify": {
+      "title": "Bekreft identiteten din",
+      "subtitle": "Bekreft hvem du er før du åpner innstillinger",
+      "recommended": "Anbefalt",
+      "tabs": {
+        "bankid": "BankID",
+        "personnummer": "Personnummer",
+        "email": "E-post"
+      },
+      "bankidDesc": "Det sikreste og raskeste alternativet. Skann med BankID-appen.",
+      "bankidBtn": "Åpne BankID",
+      "pnrLabel": "Personnummer",
+      "pnrPlaceholder": "ÅÅMMDD-XXXXX",
+      "emailLabel": "E-postadresse",
+      "emailPlaceholder": "din@epost.no",
+      "verifyBtn": "Bekreft",
+      "errorMismatch": "Feil — prøv igjen",
+      "errorNoData": "Ikke registrert — bruk BankID"
     }
   },
   "pages": {
