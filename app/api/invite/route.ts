@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
         const { data, error } = await resend.emails.send({
           from:    FROM_ADDRESS,
           to:      [invitee.email],
-          subject: `You're invited to join ${dealershipName} on BikeMeNow`,
+          subject: `Du har bjudits in till ${dealershipName}`,
           react:   React.createElement(InviteEmail, {
             inviteeName:    invitee.name,
             dealershipName,
