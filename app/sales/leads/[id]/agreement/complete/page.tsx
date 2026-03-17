@@ -30,22 +30,29 @@ interface SignedAgreement {
   dealer:   SignRecord;
 }
 
-function buildCascadeActions(pm: SelectedPayment | null) {
-  const paymentLabel = pm
+function buildCascadeActions(
+  pm:         SelectedPayment | null,
+  invoiceId:  string | null,
+  invTotal:   number,
+) {
+  const paymentLabel  = pm
     ? `${pm.icon} Betalning initierad via ${pm.name}`
     : 'Betalningsplan: 36 × 4,092 kr/mån skapad';
+  const invoiceLabel  = invoiceId
+    ? `Faktura auto-genererad: ${invoiceId} (${invTotal.toLocaleString('sv-SE')} kr)`
+    : 'Faktura auto-genererad…';
 
   return [
-    { label: 'Faktura auto-genererad: FAK-2024-0365 (133,280 kr)', delay: 300 },
-    { label: paymentLabel,                                          delay: 400 },
-    { label: 'Leveranskontroll aktiverad (58 punkter)',             delay: 500 },
-    { label: 'Fordonsstatus: Tillgänglig → Reserverad',            delay: 600 },
-    { label: 'Registrering initierad via Transportstyrelsen API',  delay: 800 },
-    { label: 'Kundprofil: Lead → Kund',                            delay: 900 },
-    { label: 'Team notifierat: Service, Leverans, Ekonomi',        delay: 1000 },
-    { label: 'Fortnox bokföring synkad',                           delay: 1200 },
-    { label: 'Blocket-annons borttagen',                           delay: 1500 },
-    { label: 'Provision beräknad: Monica — 2,846 kr',              delay: 1800 },
+    { label: paymentLabel,                                         delay: 300  },
+    { label: 'Leveranskontroll aktiverad (58 punkter)',            delay: 500  },
+    { label: 'Fordonsstatus: Tillgänglig → Reserverad',           delay: 600  },
+    { label: 'Registrering initierad via Transportstyrelsen API', delay: 800  },
+    { label: 'Kundprofil: Lead → Kund',                           delay: 900  },
+    { label: 'Team notifierat: Service, Leverans, Ekonomi',       delay: 1000 },
+    { label: invoiceLabel,                                         delay: 1400 },
+    { label: 'Fortnox bokföring synkad',                          delay: 1800 },
+    { label: 'Blocket-annons borttagen',                          delay: 2100 },
+    { label: 'Provision beräknad: Monica — 2,846 kr',             delay: 2400 },
   ];
 }
 
@@ -66,6 +73,8 @@ export default function AgreementCompletePage() {
   const [buyerName, setBuyerName]       = useState('');
   const [buyerBike, setBuyerBike]       = useState('');
   const [buyerValue, setBuyerValue]     = useState('');
+  const [invoiceId, setInvoiceId]       = useState<string | null>(null);
+  const [invoiceTotal, setInvoiceTotal] = useState(0);
 
   useEffect(() => {
     const user = localStorage.getItem('user');
@@ -143,7 +152,7 @@ export default function AgreementCompletePage() {
               }
             } catch { /* ignore */ }
 
-            await fetch('/api/payment/record', {
+            const res  = await fetch('/api/payment/record', {
               method:  'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -157,6 +166,11 @@ export default function AgreementCompletePage() {
                 totalAmount,
               }),
             });
+            const json = await res.json().catch(() => ({}));
+            if (json.invoiceId) {
+              setInvoiceId(json.invoiceId as string);
+              setInvoiceTotal(totalAmount);
+            }
             emit({ type: 'data:refresh' });
           } catch (err) {
             console.error('[complete] ensure invoice:', err);
@@ -196,7 +210,7 @@ export default function AgreementCompletePage() {
   // Cascade animation — starts once ready + payment method resolved
   useEffect(() => {
     if (!ready) return;
-    const actions = buildCascadeActions(paymentMethod);
+    const actions = buildCascadeActions(paymentMethod, invoiceId, invoiceTotal);
     actions.forEach((action, i) => {
       setTimeout(() => {
         setCompletedCount((prev) => prev + 1);
@@ -214,7 +228,7 @@ export default function AgreementCompletePage() {
     </div>
   );
 
-  const cascadeActions = buildCascadeActions(paymentMethod);
+  const cascadeActions = buildCascadeActions(paymentMethod, invoiceId, invoiceTotal);
 
   return (
     <div className="flex min-h-screen bg-[#f5f7fa]">
