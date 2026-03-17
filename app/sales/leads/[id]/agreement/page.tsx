@@ -173,10 +173,14 @@ export default function CreateAgreementPage() {
         .maybeSingle();
 
       if (lead) {
+        const leadValue = parseFloat(String(lead.value ?? '0')) || 0;
         setAgr(prev => ({
           ...prev,
           customerName: (lead.name         as string) ?? '',
           personnummer: (lead.personnummer  as string) ?? '',
+          // Pre-populate vehicle and price from the lead if available
+          vehicle:      ((lead.bike as string) || '').trim() || prev.vehicle,
+          totalPrice:   leadValue > 0 ? leadValue : prev.totalPrice,
         }));
       }
 
@@ -190,7 +194,26 @@ export default function CreateAgreementPage() {
 
   const startEdit  = () => { setDraft({ ...agr }); setIsEditing(true); };
   const cancelEdit = () => { setDraft(null); setIsEditing(false); };
-  const saveEdit   = () => { if (draft) setAgr(draft); setDraft(null); setIsEditing(false); };
+  const saveEdit   = async () => {
+    if (draft) {
+      setAgr(draft);
+      // Sync deal amount + vehicle back to the leads row so kanban cards show the correct value
+      const dealershipId = getDealershipId();
+      if (dealershipId && id !== 'default' && !Number.isNaN(Number(id))) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const sb = getSupabaseBrowser() as any;
+        const { error } = await sb
+          .from('leads')
+          .update({ value: draft.totalPrice, bike: draft.vehicle })
+          .eq('id', Number(id))
+          .eq('dealership_id', dealershipId);
+        if (error) console.error('[agreement] sync lead value:', error.message);
+        else emit({ type: 'data:refresh' });
+      }
+    }
+    setDraft(null);
+    setIsEditing(false);
+  };;
 
   function update<K extends keyof AgreementData>(key: K, value: AgreementData[K]) {
     setDraft(d => d ? { ...d, [key]: value } : d);
