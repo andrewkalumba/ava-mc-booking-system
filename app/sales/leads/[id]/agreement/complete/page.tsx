@@ -92,7 +92,7 @@ export default function AgreementCompletePage() {
       // ignore parse errors
     }
 
-    // Fetch live buyer info from Supabase
+    // Fetch live buyer info from Supabase, then ensure paid invoice exists
     const leadId       = Number(id);
     const dealershipId = getDealershipId();
     if (!Number.isNaN(leadId) && dealershipId) {
@@ -122,6 +122,45 @@ export default function AgreementCompletePage() {
           setBuyerBike((lead.bike as string) ?? '');
           const val = parseFloat(lead.value ?? '0');
           setBuyerValue(val > 0 ? `${val.toLocaleString('sv-SE')} kr` : '');
+
+          // ── Ensure a paid invoice exists (idempotent — route deduplicates) ──
+          // This fires even if the payment page already created one, so no
+          // invoice is ever lost due to the 700ms navigation race condition.
+          try {
+            let pmName = '—';
+            try {
+              const pmRaw = sessionStorage.getItem('selectedPaymentMethod');
+              if (pmRaw) pmName = (JSON.parse(pmRaw) as { name: string }).name ?? '—';
+            } catch { /* ignore */ }
+
+            let agreementRef = '';
+            let totalAmount  = val;   // fall back to leads.value
+            try {
+              const agr = JSON.parse(localStorage.getItem(`agreement_${id}`) ?? '{}');
+              if (agr.agreementNumber) agreementRef = agr.agreementNumber as string;
+              if (typeof agr.totalPrice === 'number' && agr.totalPrice > 0) {
+                totalAmount = agr.totalPrice;
+              }
+            } catch { /* ignore */ }
+
+            await fetch('/api/payment/record', {
+              method:  'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                leadId:        String(leadId),
+                dealershipId,
+                status:        'paid',
+                paymentMethod: pmName,
+                vehicle:       (lead.bike as string) ?? '',
+                customerName:  name,
+                agreementRef,
+                totalAmount,
+              }),
+            });
+            emit({ type: 'data:refresh' });
+          } catch (err) {
+            console.error('[complete] ensure invoice:', err);
+          }
         });
     }
 
