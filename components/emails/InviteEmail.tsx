@@ -91,7 +91,7 @@ export function InviteEmail({
                 <tr>
                   <td style={styles.footerBar}>
                     <p style={styles.footerText}>
-                      BikeMeNow · Motorcycle Dealership Platform
+                      BikeMeNow · contact.bikeme.now
                     </p>
                   </td>
                 </tr>
