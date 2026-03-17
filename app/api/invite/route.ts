@@ -22,10 +22,10 @@ import { InviteEmail } from '@/components/emails/InviteEmail';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Use your verified Resend domain in production.
-// During development / testing, onboarding@resend.dev works out of the box.
+// Verified domain: bikeme.now — make sure this domain is added and verified
+// in your Resend dashboard (resend.com/domains) before going to production.
 const FROM_ADDRESS =
-  process.env.RESEND_FROM_EMAIL ?? 'BikeMeNow <onboarding@resend.dev>';
+  process.env.RESEND_FROM_EMAIL ?? 'BikeMeNow <noreply@bikeme.now>';
 
 interface Invitee {
   email:     string;
