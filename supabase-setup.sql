@@ -529,6 +529,7 @@ CREATE TABLE IF NOT EXISTS dealership_settings (
   county               TEXT        DEFAULT 'Stockholm',
   phone                TEXT,
   email                TEXT,
+  email_domain         TEXT,       -- shared domain for all staff, e.g. "avamc.se"
   website              TEXT,
   bankgiro             TEXT,
   swish                TEXT,
