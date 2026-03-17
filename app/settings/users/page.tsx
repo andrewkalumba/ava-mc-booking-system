@@ -263,13 +263,17 @@ export default function UsersSettingsPage() {
     };
     persist([...users, newUser]);
     try {
-      const res  = await fetch('/api/invite/send', {
+      const res  = await fetch('/api/invite', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail.trim(), name: inviteName.trim(), role: inviteRole, inviteUrl: url, dealershipName }),
+        body: JSON.stringify({
+          invitees: [{ email: inviteEmail.trim(), name: inviteName.trim(), role: inviteRole, inviteUrl: url }],
+          dealershipName,
+          inviterName: currentUser?.name || currentUser?.givenName || 'Admin',
+        }),
       });
       const data = await res.json();
-      if (data.ok) {
+      if (data.sent > 0) {
         toast.success(`Inbjudan skickad till ${inviteEmail.trim()}`);
       } else {
         toast.error('E-post misslyckades — kopiera länken manuellt');
