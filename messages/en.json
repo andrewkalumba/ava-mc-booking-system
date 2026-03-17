@@ -96,7 +96,8 @@
       "phone": "Phone",
       "source": "Source",
       "notes": "Notes",
-      "interest": "Interest"
+      "interest": "Interest",
+      "dealValue": "Deal value (kr)"
     },
     "badges": {
       "bankid": "BankID",
@@ -113,7 +114,8 @@
       "email": "lars@example.se",
       "phone": "076-123 4567",
       "notes": "Interested in sport bikes, budget ~90-150k",
-      "interest": "Kawasaki Ninja ZX-6R"
+      "interest": "Kawasaki Ninja ZX-6R",
+      "dealValue": "e.g. 150000"
     },
     "autoFilled": "80% auto-filled",
     "gdprConsent": "The customer consents to personal data processing per our",
@@ -862,33 +864,65 @@
     "testToast": "Test notification sent — open the bell in the sidebar",
     "saveToast": "Notification settings saved",
     "events": {
-      "newLead":         { "title": "New lead",         "desc": "When a new lead is added to the pipeline" },
-      "agreementSigned": { "title": "Agreement signed",  "desc": "When a purchase agreement is signed by both parties via BankID" },
-      "paymentReceived": { "title": "Payment received",  "desc": "When a payment is confirmed (Klarna, Swish, Svea, card, etc.)" },
-      "newCustomer":     { "title": "New customer",      "desc": "When a new customer is registered in the customer registry" }
+      "newLead": {
+        "title": "New lead",
+        "desc": "When a new lead is added to the pipeline"
+      },
+      "agreementSigned": {
+        "title": "Agreement signed",
+        "desc": "When a purchase agreement is signed by both parties via BankID"
+      },
+      "paymentReceived": {
+        "title": "Payment received",
+        "desc": "When a payment is confirmed (Klarna, Swish, Svea, card, etc.)"
+      },
+      "newCustomer": {
+        "title": "New customer",
+        "desc": "When a new customer is registered in the customer registry"
+      }
     },
     "channels": {
-      "inApp": { "label": "In-app", "note": "Shown in the notification bell icon directly in the navigation" },
-      "email": { "label": "Email",  "note": "Sent to your registered email address" },
-      "sms":   { "label": "SMS",    "note": "Sent to your registered mobile number" }
+      "inApp": {
+        "label": "In-app",
+        "note": "Shown in the notification bell icon directly in the navigation"
+      },
+      "email": {
+        "label": "Email",
+        "note": "Sent to your registered email address"
+      },
+      "sms": {
+        "label": "SMS",
+        "note": "Sent to your registered mobile number"
+      }
     },
     "bell": {
-      "title":     "Notifications",
-      "new":       "new",
-      "clearAll":  "Clear all",
-      "settings":  "Settings",
-      "empty":     "No notifications yet",
+      "title": "Notifications",
+      "new": "new",
+      "clearAll": "Clear all",
+      "settings": "Settings",
+      "empty": "No notifications yet",
       "emptyHint": "Events will appear here in real time",
-      "total":     "{count, plural, one {# notification total} other {# notifications total}}",
-      "justNow":   "Just now",
-      "minAgo":    "{n} min ago",
-      "hourAgo":   "{n} hr ago",
-      "dayAgo":    "{n} days ago"
+      "total": "{count, plural, one {# notification total} other {# notifications total}}",
+      "justNow": "Just now",
+      "minAgo": "{n} min ago",
+      "hourAgo": "{n} hr ago",
+      "dayAgo": "{n} days ago"
     },
     "actions": {
-      "newLead":         { "title": "New lead created",                 "interestedIn": "is interested in" },
-      "agreementSigned": { "title": "Agreement signed by both parties", "signedBy": "Purchase agreement signed by", "and": "and", "viaBankID": "via BankID" },
-      "paymentConfirmed":{ "title": "Payment confirmed",                "via": "via" }
+      "newLead": {
+        "title": "New lead created",
+        "interestedIn": "is interested in"
+      },
+      "agreementSigned": {
+        "title": "Agreement signed by both parties",
+        "signedBy": "Purchase agreement signed by",
+        "and": "and",
+        "viaBankID": "via BankID"
+      },
+      "paymentConfirmed": {
+        "title": "Payment confirmed",
+        "via": "via"
+      }
     }
   },
   "billing": {
@@ -941,77 +975,77 @@
     "cancelBack": "Keep subscription",
     "cancelConfirmButton": "Yes, cancel",
     "f": {
-      "users3":         "Up to 3 users",
+      "users3": "Up to 3 users",
       "usersUnlimited": "Unlimited users",
-      "leads50":        "50 leads / month",
+      "leads50": "50 leads / month",
       "leadsUnlimited": "Unlimited leads",
-      "bankid":         "BankID digital signing",
-      "basicPayments":  "Basic payment providers",
-      "allPayments":    "All payment providers",
-      "notifications":  "Real-time notifications",
-      "emailSupport":   "Email support",
-      "api":            "API access",
-      "multiUser":      "Multi-user roles",
-      "prioritySupport":"Priority support"
+      "bankid": "BankID digital signing",
+      "basicPayments": "Basic payment providers",
+      "allPayments": "All payment providers",
+      "notifications": "Real-time notifications",
+      "emailSupport": "Email support",
+      "api": "API access",
+      "multiUser": "Multi-user roles",
+      "prioritySupport": "Priority support"
     }
   },
   "invoices": {
-    "breadcrumb":    "Invoices",
-    "title":         "Invoice Management",
-    "subtitle":      "Auto-generated invoices from completed agreements and payments",
+    "breadcrumb": "Invoices",
+    "title": "Invoice Management",
+    "subtitle": "Auto-generated invoices from completed agreements and payments",
     "searchPlaceholder": "Search by customer, vehicle or invoice number…",
-    "filterAll":     "All",
-    "filterPaid":    "Paid",
+    "filterAll": "All",
+    "filterPaid": "Paid",
     "filterPending": "Pending",
-    "statTotal":     "Total revenue",
-    "statCount":     "Total invoices",
-    "statPaid":      "Paid",
-    "statPending":   "Pending",
-    "colInvoice":    "Invoice",
-    "colDate":       "Date",
-    "colCustomer":   "Customer",
-    "colVehicle":    "Vehicle",
-    "colAgreement":  "Agreement",
-    "colMethod":     "Payment",
-    "colAmount":     "Amount",
-    "colStatus":     "Status",
-    "colActions":    "Actions",
-    "badgePaid":     "Paid",
-    "badgePending":  "Pending",
-    "printBtn":      "Print",
-    "empty":         "No invoices found",
-    "emptyHint":     "Invoices are created automatically when a payment is completed.",
-    "printTitle":    "Invoice",
-    "printClose":    "Close",
-    "printPrint":    "Print",
-    "printIssued":   "Invoice date",
-    "printPaid":     "Payment date",
-    "printMethod":   "Payment method",
+    "statTotal": "Total revenue",
+    "statCount": "Total invoices",
+    "statPaid": "Paid",
+    "statPending": "Pending",
+    "colInvoice": "Invoice",
+    "colDate": "Date",
+    "colCustomer": "Customer",
+    "colVehicle": "Vehicle",
+    "colAgreement": "Agreement",
+    "colMethod": "Payment",
+    "colAmount": "Amount",
+    "colStatus": "Status",
+    "colActions": "Actions",
+    "badgePaid": "Paid",
+    "badgePending": "Pending",
+    "printBtn": "Print",
+    "empty": "No invoices found",
+    "emptyHint": "Invoices are created automatically when a payment is completed.",
+    "printTitle": "Invoice",
+    "printClose": "Close",
+    "printPrint": "Print",
+    "printIssued": "Invoice date",
+    "printPaid": "Payment date",
+    "printMethod": "Payment method",
     "printCustomer": "Customer",
-    "printVehicle":  "Vehicle",
-    "printAgreement":"Agreement ref",
-    "printDesc":     "Sale of vehicle per purchase agreement",
-    "printNet":      "Net amount (excl. VAT)",
-    "printVat":      "VAT 25%",
-    "printTotal":    "Total incl. VAT",
-    "printStatus":   "Status",
-    "printFooter":   "{dealerName} • Org.nr {orgNr} • {city} • {email}"
+    "printVehicle": "Vehicle",
+    "printAgreement": "Agreement ref",
+    "printDesc": "Sale of vehicle per purchase agreement",
+    "printNet": "Net amount (excl. VAT)",
+    "printVat": "VAT 25%",
+    "printTotal": "Total incl. VAT",
+    "printStatus": "Status",
+    "printFooter": "{dealerName} • Org.nr {orgNr} • {city} • {email}"
   },
   "invite": {
-    "title":              "You've been invited",
-    "by":                 "Invited by {dealershipName}",
-    "expired":            "Invalid or expired invitation",
-    "expiredDesc":        "This link is no longer valid. Contact your administrator for a new invitation.",
-    "verify":             "Verify with BankID",
-    "verifyDesc":         "Confirm your identity to activate your account.",
-    "success":            "Account activated!",
-    "successDesc":        "Redirecting to your dashboard...",
-    "labelName":          "Name",
-    "labelEmail":         "Email",
-    "labelRole":          "Role",
-    "labelCompany":       "Company",
-    "goToLogin":          "Go to login",
+    "title": "You've been invited",
+    "by": "Invited by {dealershipName}",
+    "expired": "Invalid or expired invitation",
+    "expiredDesc": "This link is no longer valid. Contact your administrator for a new invitation.",
+    "verify": "Verify with BankID",
+    "verifyDesc": "Confirm your identity to activate your account.",
+    "success": "Account activated!",
+    "successDesc": "Redirecting to your dashboard...",
+    "labelName": "Name",
+    "labelEmail": "Email",
+    "labelRole": "Role",
+    "labelCompany": "Company",
+    "goToLogin": "Go to login",
     "alreadyHaveAccount": "Already have an account?",
-    "loginLink":          "Log in"
+    "loginLink": "Log in"
   }
 }

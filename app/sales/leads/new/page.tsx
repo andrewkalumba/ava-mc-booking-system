@@ -52,6 +52,7 @@ const NewLeadPage = () => {
     source: 'Walk-in',
     notes: '',
     interest: '',
+    estimatedValue: 0,
   });
 
   const handleBankIDComplete = (result: BankIDResult) => {
@@ -78,7 +79,7 @@ const NewLeadPage = () => {
       const lead = await createLead({
         name:        formData.name,
         bike:        formData.interest || '—',
-        value:       0,
+        value:       formData.estimatedValue || 0,
         lead_status: 'warm',
         stage:       'new',
         email:       formData.email,
@@ -102,10 +103,10 @@ const NewLeadPage = () => {
   };
 
   const matchingVehicles = [
-    { name: 'Ninja ZX-6R', price: '150k kr', match: 92 },
-    { name: 'MT-07', price: '89.9k kr', match: 87 },
-    { name: 'CB650R', price: '105k kr', match: 81 },
-    { name: 'GSX-S750', price: '112k kr', match: 74 },
+    { name: 'Ninja ZX-6R', price: '150k kr', rawPrice: 150000, match: 92 },
+    { name: 'MT-07', price: '89.9k kr', rawPrice: 89900, match: 87 },
+    { name: 'CB650R', price: '105k kr', rawPrice: 105000, match: 81 },
+    { name: 'GSX-S750', price: '112k kr', rawPrice: 112000, match: 74 },
   ];
 
   if (!user) {
@@ -369,6 +370,20 @@ const NewLeadPage = () => {
                   />
                 </div>
 
+                {/* Deal Value Field */}
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">{t('newLead.fields.dealValue')}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    value={formData.estimatedValue || ''}
+                    onChange={(e) => setFormData({ ...formData, estimatedValue: parseInt(e.target.value) || 0 })}
+                    className="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                    placeholder={t('newLead.placeholders.dealValue')}
+                  />
+                </div>
+
                 {/* GDPR Consent */}
                 <label className="flex items-start gap-2 cursor-pointer mt-3">
                   <input
@@ -422,7 +437,16 @@ const NewLeadPage = () => {
               {matchingVehicles.map((vehicle) => (
                 <div
                   key={vehicle.name}
-                  className="bg-slate-50 rounded-lg p-3 hover:bg-slate-100 transition-colors cursor-pointer"
+                  onClick={() => setFormData(prev => ({
+                    ...prev,
+                    interest:       vehicle.name,
+                    estimatedValue: vehicle.rawPrice,
+                  }))}
+                  className={`rounded-lg p-3 transition-colors cursor-pointer border-2 ${
+                    formData.interest === vehicle.name
+                      ? 'bg-orange-50 border-[#FF6B2C]'
+                      : 'bg-slate-50 border-transparent hover:bg-slate-100'
+                  }`}
                 >
                   <div className="flex justify-between items-start mb-1">
                     <div>

@@ -23,7 +23,7 @@
     "inventory": "Lager",
     "purchaseOrders": "Inköpsorder",
     "suppliers": "Leverantörer",
-      "purchaseinvoices": "Inköpsfakturor",
+    "purchaseinvoices": "Inköpsfakturor",
     "salesPipeline": "Försäljningspipeline",
     "pipeline": "Pipeline",
     "customers": "Kunder",
@@ -96,7 +96,8 @@
       "phone": "Telefon",
       "source": "Källa",
       "notes": "Anteckningar",
-      "interest": "Intresse"
+      "interest": "Intresse",
+      "dealValue": "Affärsvärde (kr)"
     },
     "badges": {
       "bankid": "BankID",
@@ -113,7 +114,8 @@
       "email": "lars@example.se",
       "phone": "076-123 4567",
       "notes": "Intresserad av sportcyklar, budget ~90-150k",
-      "interest": "Kawasaki Ninja ZX-6R"
+      "interest": "Kawasaki Ninja ZX-6R",
+      "dealValue": "t.ex. 150000"
     },
     "autoFilled": "80% auto-ifyllt",
     "gdprConsent": "Kunden samtycker till behandling av personuppgifter enligt vår",
@@ -862,33 +864,65 @@
     "testToast": "Testnotifiering skickad — öppna klockan i sidofältet",
     "saveToast": "Notifieringsinställningar sparade",
     "events": {
-      "newLead":         { "title": "Nytt lead",           "desc": "När ett nytt lead läggs till i pipelinen" },
-      "agreementSigned": { "title": "Avtal signerat",       "desc": "När ett köpeavtal signerats av båda parter via BankID" },
-      "paymentReceived": { "title": "Betalning mottagen",   "desc": "När en betalning bekräftats (Klarna, Swish, Svea, kort m.fl.)" },
-      "newCustomer":     { "title": "Ny kund",              "desc": "När en ny kund registreras i kundregistret" }
+      "newLead": {
+        "title": "Nytt lead",
+        "desc": "När ett nytt lead läggs till i pipelinen"
+      },
+      "agreementSigned": {
+        "title": "Avtal signerat",
+        "desc": "När ett köpeavtal signerats av båda parter via BankID"
+      },
+      "paymentReceived": {
+        "title": "Betalning mottagen",
+        "desc": "När en betalning bekräftats (Klarna, Swish, Svea, kort m.fl.)"
+      },
+      "newCustomer": {
+        "title": "Ny kund",
+        "desc": "När en ny kund registreras i kundregistret"
+      }
     },
     "channels": {
-      "inApp": { "label": "I appen", "note": "Visas i notifieringsikonen direkt i navigeringen" },
-      "email": { "label": "E-post",  "note": "Skickas till din registrerade e-postadress" },
-      "sms":   { "label": "SMS",     "note": "Skickas till ditt registrerade mobilnummer" }
+      "inApp": {
+        "label": "I appen",
+        "note": "Visas i notifieringsikonen direkt i navigeringen"
+      },
+      "email": {
+        "label": "E-post",
+        "note": "Skickas till din registrerade e-postadress"
+      },
+      "sms": {
+        "label": "SMS",
+        "note": "Skickas till ditt registrerade mobilnummer"
+      }
     },
     "bell": {
-      "title":     "Notifieringar",
-      "new":       "nya",
-      "clearAll":  "Rensa alla",
-      "settings":  "Inställningar",
-      "empty":     "Inga notifieringar ännu",
+      "title": "Notifieringar",
+      "new": "nya",
+      "clearAll": "Rensa alla",
+      "settings": "Inställningar",
+      "empty": "Inga notifieringar ännu",
       "emptyHint": "Händelser visas här i realtid",
-      "total":     "{count, plural, one {# notifiering totalt} other {# notifieringar totalt}}",
-      "justNow":   "Just nu",
-      "minAgo":    "{n} min sedan",
-      "hourAgo":   "{n} tim sedan",
-      "dayAgo":    "{n} dagar sedan"
+      "total": "{count, plural, one {# notifiering totalt} other {# notifieringar totalt}}",
+      "justNow": "Just nu",
+      "minAgo": "{n} min sedan",
+      "hourAgo": "{n} tim sedan",
+      "dayAgo": "{n} dagar sedan"
     },
     "actions": {
-      "newLead":         { "title": "Nytt lead skapat",                "interestedIn": "är intresserad av" },
-      "agreementSigned": { "title": "Avtal signerat av båda parter",   "signedBy": "Köpeavtal signerat av", "and": "och", "viaBankID": "via BankID" },
-      "paymentConfirmed":{ "title": "Betalning bekräftad",             "via": "via" }
+      "newLead": {
+        "title": "Nytt lead skapat",
+        "interestedIn": "är intresserad av"
+      },
+      "agreementSigned": {
+        "title": "Avtal signerat av båda parter",
+        "signedBy": "Köpeavtal signerat av",
+        "and": "och",
+        "viaBankID": "via BankID"
+      },
+      "paymentConfirmed": {
+        "title": "Betalning bekräftad",
+        "via": "via"
+      }
     }
   },
   "billing": {
@@ -941,77 +975,77 @@
     "cancelBack": "Behåll prenumeration",
     "cancelConfirmButton": "Ja, avsluta",
     "f": {
-      "users3":         "Upp till 3 användare",
+      "users3": "Upp till 3 användare",
       "usersUnlimited": "Obegränsade användare",
-      "leads50":        "50 leads / mån",
+      "leads50": "50 leads / mån",
       "leadsUnlimited": "Obegränsade leads",
-      "bankid":         "BankID-signering",
-      "basicPayments":  "Grundläggande betalmetoder",
-      "allPayments":    "Alla betalmetoder",
-      "notifications":  "Realtidsnotifieringar",
-      "emailSupport":   "E-postsupport",
-      "api":            "API-åtkomst",
-      "multiUser":      "Flerbrukarroller",
-      "prioritySupport":"Prioritetssupport"
+      "bankid": "BankID-signering",
+      "basicPayments": "Grundläggande betalmetoder",
+      "allPayments": "Alla betalmetoder",
+      "notifications": "Realtidsnotifieringar",
+      "emailSupport": "E-postsupport",
+      "api": "API-åtkomst",
+      "multiUser": "Flerbrukarroller",
+      "prioritySupport": "Prioritetssupport"
     }
   },
   "invoices": {
-    "breadcrumb":    "Fakturor",
-    "title":         "Fakturahantering",
-    "subtitle":      "Automatiskt genererade fakturor från slutförda avtal och betalningar",
+    "breadcrumb": "Fakturor",
+    "title": "Fakturahantering",
+    "subtitle": "Automatiskt genererade fakturor från slutförda avtal och betalningar",
     "searchPlaceholder": "Sök på kund, fordon eller fakturanummer…",
-    "filterAll":     "Alla",
-    "filterPaid":    "Betalda",
+    "filterAll": "Alla",
+    "filterPaid": "Betalda",
     "filterPending": "Väntande",
-    "statTotal":     "Total omsättning",
-    "statCount":     "Totalt fakturor",
-    "statPaid":      "Betalda",
-    "statPending":   "Väntande",
-    "colInvoice":    "Faktura",
-    "colDate":       "Datum",
-    "colCustomer":   "Kund",
-    "colVehicle":    "Fordon",
-    "colAgreement":  "Avtal",
-    "colMethod":     "Betalning",
-    "colAmount":     "Belopp",
-    "colStatus":     "Status",
-    "colActions":    "Åtgärder",
-    "badgePaid":     "Betald",
-    "badgePending":  "Väntande",
-    "printBtn":      "Skriv ut",
-    "empty":         "Inga fakturor hittades",
-    "emptyHint":     "Fakturor skapas automatiskt när en betalning slutförs.",
-    "printTitle":    "Faktura",
-    "printClose":    "Stäng",
-    "printPrint":    "Skriv ut",
-    "printIssued":   "Fakturadatum",
-    "printPaid":     "Betalningsdatum",
-    "printMethod":   "Betalningsmetod",
+    "statTotal": "Total omsättning",
+    "statCount": "Totalt fakturor",
+    "statPaid": "Betalda",
+    "statPending": "Väntande",
+    "colInvoice": "Faktura",
+    "colDate": "Datum",
+    "colCustomer": "Kund",
+    "colVehicle": "Fordon",
+    "colAgreement": "Avtal",
+    "colMethod": "Betalning",
+    "colAmount": "Belopp",
+    "colStatus": "Status",
+    "colActions": "Åtgärder",
+    "badgePaid": "Betald",
+    "badgePending": "Väntande",
+    "printBtn": "Skriv ut",
+    "empty": "Inga fakturor hittades",
+    "emptyHint": "Fakturor skapas automatiskt när en betalning slutförs.",
+    "printTitle": "Faktura",
+    "printClose": "Stäng",
+    "printPrint": "Skriv ut",
+    "printIssued": "Fakturadatum",
+    "printPaid": "Betalningsdatum",
+    "printMethod": "Betalningsmetod",
     "printCustomer": "Kund",
-    "printVehicle":  "Fordon",
-    "printAgreement":"Avtalsref",
-    "printDesc":     "Försäljning av fordon per köpeavtal",
-    "printNet":      "Nettobelopp (exkl. moms)",
-    "printVat":      "Moms 25%",
-    "printTotal":    "Totalt inkl. moms",
-    "printStatus":   "Status",
-    "printFooter":   "{dealerName} • Org.nr {orgNr} • {city} • {email}"
+    "printVehicle": "Fordon",
+    "printAgreement": "Avtalsref",
+    "printDesc": "Försäljning av fordon per köpeavtal",
+    "printNet": "Nettobelopp (exkl. moms)",
+    "printVat": "Moms 25%",
+    "printTotal": "Totalt inkl. moms",
+    "printStatus": "Status",
+    "printFooter": "{dealerName} • Org.nr {orgNr} • {city} • {email}"
   },
   "invite": {
-    "title":              "Du har blivit inbjuden",
-    "by":                 "Inbjuden av {dealershipName}",
-    "expired":            "Ogiltig eller utgången inbjudan",
-    "expiredDesc":        "Den här länken är inte längre giltig. Kontakta administratören för en ny inbjudan.",
-    "verify":             "Verifiera med BankID",
-    "verifyDesc":         "Bekräfta din identitet för att aktivera ditt konto.",
-    "success":            "Konto aktiverat!",
-    "successDesc":        "Du omdirigeras till instrumentpanelen...",
-    "labelName":          "Namn",
-    "labelEmail":         "E-post",
-    "labelRole":          "Roll",
-    "labelCompany":       "Företag",
-    "goToLogin":          "Gå till inloggning",
+    "title": "Du har blivit inbjuden",
+    "by": "Inbjuden av {dealershipName}",
+    "expired": "Ogiltig eller utgången inbjudan",
+    "expiredDesc": "Den här länken är inte längre giltig. Kontakta administratören för en ny inbjudan.",
+    "verify": "Verifiera med BankID",
+    "verifyDesc": "Bekräfta din identitet för att aktivera ditt konto.",
+    "success": "Konto aktiverat!",
+    "successDesc": "Du omdirigeras till instrumentpanelen...",
+    "labelName": "Namn",
+    "labelEmail": "E-post",
+    "labelRole": "Roll",
+    "labelCompany": "Företag",
+    "goToLogin": "Gå till inloggning",
     "alreadyHaveAccount": "Har du redan ett konto?",
-    "loginLink":          "Logga in"
+    "loginLink": "Logga in"
   }
 }

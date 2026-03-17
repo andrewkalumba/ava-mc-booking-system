@@ -185,33 +185,31 @@ export default function CreateAgreementPage() {
           totalPrice:   resolvedPrice,
         }));
 
-        // Always persist agreement data to localStorage so the payment page can read it
-        // even before the user explicitly edits/saves the form
+        // Always persist to localStorage so the payment page can read the latest values
         try {
           const existing = JSON.parse(localStorage.getItem(`agreement_${leadId}`) ?? '{}');
           localStorage.setItem(`agreement_${leadId}`, JSON.stringify({
             ...existing,
-            vehicle:       resolvedVehicle,
-            totalPrice:    resolvedPrice,
+            vehicle:         resolvedVehicle,
+            totalPrice:      resolvedPrice,
             agreementNumber: existing.agreementNumber ?? BLANK_AGREEMENT.agreementNumber,
-            vin:             existing.vin           ?? BLANK_AGREEMENT.vin,
+            vin:             existing.vin             ?? BLANK_AGREEMENT.vin,
           }));
         } catch { /* ignore */ }
 
-        // If lead.value is 0, write the resolved price back to Supabase immediately
-        // so kanban cards show a non-zero amount right away
-        if (leadValue === 0 && dealershipId) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const sbWrite = getSupabaseBrowser() as any;
-          sbWrite
+        // Always sync the resolved price back to Supabase so the kanban card
+        // shows a non-zero amount immediately (not just on explicit save)
+        if (dealershipId) {
+          const { error: writeErr } = await sb
             .from('leads')
             .update({ value: resolvedPrice })
             .eq('id', leadId)
-            .eq('dealership_id', dealershipId)
-            .then(({ error }: { error: { message: string } | null }) => {
-              if (error) console.error('[agreement] init lead value:', error.message);
-              else emit({ type: 'data:refresh' });
-            });
+            .eq('dealership_id', dealershipId);
+          if (writeErr) {
+            console.error('[agreement] sync lead value:', writeErr.message);
+          } else {
+            emit({ type: 'data:refresh' });
+          }
         }
       }
 

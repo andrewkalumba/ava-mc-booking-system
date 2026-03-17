@@ -23,7 +23,7 @@
     "inventory": "المخزون",
     "purchaseOrders": "أوامر الشراء",
     "suppliers": "الموردون",
-      "purchaseinvoices": "فواتير الشراء",
+    "purchaseinvoices": "فواتير الشراء",
     "salesPipeline": "خط المبيعات",
     "pipeline": "خط الأنابيب",
     "customers": "العملاء",
@@ -96,7 +96,8 @@
       "phone": "الهاتف",
       "source": "المصدر",
       "notes": "ملاحظات",
-      "interest": "الاهتمام"
+      "interest": "الاهتمام",
+      "dealValue": "قيمة الصفقة (kr)"
     },
     "badges": {
       "bankid": "BankID",
@@ -113,7 +114,8 @@
       "email": "lars@example.sa",
       "phone": "05-123-4567",
       "notes": "مهتم بالدراجات الرياضية، الميزانية ~90-150 ألف",
-      "interest": "كاواساكي نينجا ZX-6R"
+      "interest": "كاواساكي نينجا ZX-6R",
+      "dealValue": "مثال: 150000"
     },
     "autoFilled": "تم ملء 80% تلقائيًا",
     "gdprConsent": "يوافق العميل على معالجة البيانات الشخصية وفقاً لـ",
@@ -861,33 +863,65 @@
     "testToast": "تم إرسال الإشعار التجريبي — افتح الجرس في الشريط الجانبي",
     "saveToast": "تم حفظ إعدادات الإشعارات",
     "events": {
-      "newLead":         { "title": "عميل محتمل جديد",   "desc": "عند إضافة عميل محتمل جديد إلى خط الأنابيب" },
-      "agreementSigned": { "title": "تم توقيع العقد",    "desc": "عند توقيع عقد الشراء من كلا الطرفين عبر BankID" },
-      "paymentReceived": { "title": "تم استلام الدفعة",  "desc": "عند تأكيد دفعة (Klarna، Swish، Svea، بطاقة، إلخ.)" },
-      "newCustomer":     { "title": "عميل جديد",         "desc": "عند تسجيل عميل جديد في سجل العملاء" }
+      "newLead": {
+        "title": "عميل محتمل جديد",
+        "desc": "عند إضافة عميل محتمل جديد إلى خط الأنابيب"
+      },
+      "agreementSigned": {
+        "title": "تم توقيع العقد",
+        "desc": "عند توقيع عقد الشراء من كلا الطرفين عبر BankID"
+      },
+      "paymentReceived": {
+        "title": "تم استلام الدفعة",
+        "desc": "عند تأكيد دفعة (Klarna، Swish، Svea، بطاقة، إلخ.)"
+      },
+      "newCustomer": {
+        "title": "عميل جديد",
+        "desc": "عند تسجيل عميل جديد في سجل العملاء"
+      }
     },
     "channels": {
-      "inApp": { "label": "داخل التطبيق",       "note": "يظهر في أيقونة الإشعارات مباشرةً في التنقل" },
-      "email": { "label": "البريد الإلكتروني", "note": "يُرسَل إلى عنوان بريدك الإلكتروني المسجّل" },
-      "sms":   { "label": "رسالة نصية",        "note": "يُرسَل إلى رقم هاتفك المسجّل" }
+      "inApp": {
+        "label": "داخل التطبيق",
+        "note": "يظهر في أيقونة الإشعارات مباشرةً في التنقل"
+      },
+      "email": {
+        "label": "البريد الإلكتروني",
+        "note": "يُرسَل إلى عنوان بريدك الإلكتروني المسجّل"
+      },
+      "sms": {
+        "label": "رسالة نصية",
+        "note": "يُرسَل إلى رقم هاتفك المسجّل"
+      }
     },
     "bell": {
-      "title":     "الإشعارات",
-      "new":       "جديد",
-      "clearAll":  "مسح الكل",
-      "settings":  "الإعدادات",
-      "empty":     "لا توجد إشعارات بعد",
+      "title": "الإشعارات",
+      "new": "جديد",
+      "clearAll": "مسح الكل",
+      "settings": "الإعدادات",
+      "empty": "لا توجد إشعارات بعد",
       "emptyHint": "ستظهر الأحداث هنا في الوقت الفعلي",
-      "total":     "{count, plural, one {# إشعار في المجموع} other {# إشعارات في المجموع}}",
-      "justNow":   "الآن",
-      "minAgo":    "منذ {n} دقيقة",
-      "hourAgo":   "منذ {n} ساعة",
-      "dayAgo":    "منذ {n} أيام"
+      "total": "{count, plural, one {# إشعار في المجموع} other {# إشعارات في المجموع}}",
+      "justNow": "الآن",
+      "minAgo": "منذ {n} دقيقة",
+      "hourAgo": "منذ {n} ساعة",
+      "dayAgo": "منذ {n} أيام"
     },
     "actions": {
-      "newLead":         { "title": "تم إنشاء عميل محتمل جديد",        "interestedIn": "مهتم بـ" },
-      "agreementSigned": { "title": "تم توقيع العقد من كلا الطرفين",   "signedBy": "تم توقيع عقد الشراء من قِبَل", "and": "و", "viaBankID": "عبر BankID" },
-      "paymentConfirmed":{ "title": "تم تأكيد الدفعة",                  "via": "عبر" }
+      "newLead": {
+        "title": "تم إنشاء عميل محتمل جديد",
+        "interestedIn": "مهتم بـ"
+      },
+      "agreementSigned": {
+        "title": "تم توقيع العقد من كلا الطرفين",
+        "signedBy": "تم توقيع عقد الشراء من قِبَل",
+        "and": "و",
+        "viaBankID": "عبر BankID"
+      },
+      "paymentConfirmed": {
+        "title": "تم تأكيد الدفعة",
+        "via": "عبر"
+      }
     }
   },
   "billing": {
@@ -940,77 +974,77 @@
     "cancelBack": "الاحتفاظ بالاشتراك",
     "cancelConfirmButton": "نعم، إلغاء",
     "f": {
-      "users3":         "حتى 3 مستخدمين",
+      "users3": "حتى 3 مستخدمين",
       "usersUnlimited": "مستخدمون غير محدودون",
-      "leads50":        "50 عميل محتمل / شهر",
+      "leads50": "50 عميل محتمل / شهر",
       "leadsUnlimited": "عملاء محتملون غير محدودون",
-      "bankid":         "توقيع رقمي عبر BankID",
-      "basicPayments":  "طرق دفع أساسية",
-      "allPayments":    "جميع طرق الدفع",
-      "notifications":  "إشعارات فورية",
-      "emailSupport":   "دعم البريد الإلكتروني",
-      "api":            "الوصول إلى API",
-      "multiUser":      "أدوار متعددة المستخدمين",
-      "prioritySupport":"دعم ذو أولوية"
+      "bankid": "توقيع رقمي عبر BankID",
+      "basicPayments": "طرق دفع أساسية",
+      "allPayments": "جميع طرق الدفع",
+      "notifications": "إشعارات فورية",
+      "emailSupport": "دعم البريد الإلكتروني",
+      "api": "الوصول إلى API",
+      "multiUser": "أدوار متعددة المستخدمين",
+      "prioritySupport": "دعم ذو أولوية"
     }
   },
   "invoices": {
-    "breadcrumb":    "الفواتير",
-    "title":         "إدارة الفواتير",
-    "subtitle":      "فواتير مُنشأة تلقائياً من الاتفاقيات والمدفوعات المكتملة",
+    "breadcrumb": "الفواتير",
+    "title": "إدارة الفواتير",
+    "subtitle": "فواتير مُنشأة تلقائياً من الاتفاقيات والمدفوعات المكتملة",
     "searchPlaceholder": "ابحث بالعميل أو المركبة أو رقم الفاتورة…",
-    "filterAll":     "الكل",
-    "filterPaid":    "مدفوعة",
+    "filterAll": "الكل",
+    "filterPaid": "مدفوعة",
     "filterPending": "معلقة",
-    "statTotal":     "إجمالي الإيرادات",
-    "statCount":     "إجمالي الفواتير",
-    "statPaid":      "مدفوعة",
-    "statPending":   "معلقة",
-    "colInvoice":    "الفاتورة",
-    "colDate":       "التاريخ",
-    "colCustomer":   "العميل",
-    "colVehicle":    "المركبة",
-    "colAgreement":  "الاتفاقية",
-    "colMethod":     "الدفع",
-    "colAmount":     "المبلغ",
-    "colStatus":     "الحالة",
-    "colActions":    "الإجراءات",
-    "badgePaid":     "مدفوعة",
-    "badgePending":  "معلقة",
-    "printBtn":      "طباعة",
-    "empty":         "لا توجد فواتير",
-    "emptyHint":     "تُنشأ الفواتير تلقائياً عند اكتمال الدفع.",
-    "printTitle":    "فاتورة",
-    "printClose":    "إغلاق",
-    "printPrint":    "طباعة",
-    "printIssued":   "تاريخ الفاتورة",
-    "printPaid":     "تاريخ الدفع",
-    "printMethod":   "طريقة الدفع",
+    "statTotal": "إجمالي الإيرادات",
+    "statCount": "إجمالي الفواتير",
+    "statPaid": "مدفوعة",
+    "statPending": "معلقة",
+    "colInvoice": "الفاتورة",
+    "colDate": "التاريخ",
+    "colCustomer": "العميل",
+    "colVehicle": "المركبة",
+    "colAgreement": "الاتفاقية",
+    "colMethod": "الدفع",
+    "colAmount": "المبلغ",
+    "colStatus": "الحالة",
+    "colActions": "الإجراءات",
+    "badgePaid": "مدفوعة",
+    "badgePending": "معلقة",
+    "printBtn": "طباعة",
+    "empty": "لا توجد فواتير",
+    "emptyHint": "تُنشأ الفواتير تلقائياً عند اكتمال الدفع.",
+    "printTitle": "فاتورة",
+    "printClose": "إغلاق",
+    "printPrint": "طباعة",
+    "printIssued": "تاريخ الفاتورة",
+    "printPaid": "تاريخ الدفع",
+    "printMethod": "طريقة الدفع",
     "printCustomer": "العميل",
-    "printVehicle":  "المركبة",
-    "printAgreement":"مرجع الاتفاقية",
-    "printDesc":     "بيع مركبة وفق عقد الشراء",
-    "printNet":      "المبلغ الصافي (بدون ضريبة)",
-    "printVat":      "ضريبة القيمة المضافة 25%",
-    "printTotal":    "الإجمالي شامل الضريبة",
-    "printStatus":   "الحالة",
-    "printFooter":   "{dealerName} • Org.nr {orgNr} • {city} • {email}"
+    "printVehicle": "المركبة",
+    "printAgreement": "مرجع الاتفاقية",
+    "printDesc": "بيع مركبة وفق عقد الشراء",
+    "printNet": "المبلغ الصافي (بدون ضريبة)",
+    "printVat": "ضريبة القيمة المضافة 25%",
+    "printTotal": "الإجمالي شامل الضريبة",
+    "printStatus": "الحالة",
+    "printFooter": "{dealerName} • Org.nr {orgNr} • {city} • {email}"
   },
   "invite": {
-    "title":              "لقد تمت دعوتك",
-    "by":                 "دعوة من {dealershipName}",
-    "expired":            "دعوة غير صالحة أو منتهية الصلاحية",
-    "expiredDesc":        "هذا الرابط لم يعد صالحاً. تواصل مع المسؤول للحصول على دعوة جديدة.",
-    "verify":             "التحقق عبر BankID",
-    "verifyDesc":         "أكّد هويتك لتفعيل حسابك.",
-    "success":            "تم تفعيل الحساب!",
-    "successDesc":        "جارٍ إعادة التوجيه إلى لوحة التحكم...",
-    "labelName":          "الاسم",
-    "labelEmail":         "البريد الإلكتروني",
-    "labelRole":          "الدور",
-    "labelCompany":       "الشركة",
-    "goToLogin":          "الذهاب إلى تسجيل الدخول",
+    "title": "لقد تمت دعوتك",
+    "by": "دعوة من {dealershipName}",
+    "expired": "دعوة غير صالحة أو منتهية الصلاحية",
+    "expiredDesc": "هذا الرابط لم يعد صالحاً. تواصل مع المسؤول للحصول على دعوة جديدة.",
+    "verify": "التحقق عبر BankID",
+    "verifyDesc": "أكّد هويتك لتفعيل حسابك.",
+    "success": "تم تفعيل الحساب!",
+    "successDesc": "جارٍ إعادة التوجيه إلى لوحة التحكم...",
+    "labelName": "الاسم",
+    "labelEmail": "البريد الإلكتروني",
+    "labelRole": "الدور",
+    "labelCompany": "الشركة",
+    "goToLogin": "الذهاب إلى تسجيل الدخول",
     "alreadyHaveAccount": "هل لديك حساب بالفعل؟",
-    "loginLink":          "تسجيل الدخول"
+    "loginLink": "تسجيل الدخول"
   }
 }

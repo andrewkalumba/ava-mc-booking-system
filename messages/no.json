@@ -96,7 +96,8 @@
       "phone": "Telefon",
       "source": "Kilde",
       "notes": "Notater",
-      "interest": "Interesse"
+      "interest": "Interesse",
+      "dealValue": "Dealverdi (kr)"
     },
     "badges": {
       "bankid": "BankID",
@@ -113,7 +114,8 @@
       "email": "lars@example.no",
       "phone": "976-12 345",
       "notes": "Interessert i sportssykler, budsjett ~90-150k",
-      "interest": "Kawasaki Ninja ZX-6R"
+      "interest": "Kawasaki Ninja ZX-6R",
+      "dealValue": "f.eks. 150000"
     },
     "autoFilled": "80% auto-utfylt",
     "gdprConsent": "Kunden samtykker til behandling av personopplysninger i henhold til vår",
@@ -861,33 +863,65 @@
     "testToast": "Testvarsel sendt — åpne bjølla i sidefeltet",
     "saveToast": "Varselinnstillinger lagret",
     "events": {
-      "newLead":         { "title": "Nytt lead",         "desc": "Når et nytt lead legges til i pipeline" },
-      "agreementSigned": { "title": "Avtale signert",    "desc": "Når en kjøpsavtale er signert av begge parter via BankID" },
-      "paymentReceived": { "title": "Betaling mottatt",  "desc": "Når en betaling er bekreftet (Klarna, Swish, Svea, kort osv.)" },
-      "newCustomer":     { "title": "Ny kunde",          "desc": "Når en ny kunde registreres i kunderegisteret" }
+      "newLead": {
+        "title": "Nytt lead",
+        "desc": "Når et nytt lead legges til i pipeline"
+      },
+      "agreementSigned": {
+        "title": "Avtale signert",
+        "desc": "Når en kjøpsavtale er signert av begge parter via BankID"
+      },
+      "paymentReceived": {
+        "title": "Betaling mottatt",
+        "desc": "Når en betaling er bekreftet (Klarna, Swish, Svea, kort osv.)"
+      },
+      "newCustomer": {
+        "title": "Ny kunde",
+        "desc": "Når en ny kunde registreres i kunderegisteret"
+      }
     },
     "channels": {
-      "inApp": { "label": "I appen", "note": "Vises i varselbjølleikonet direkte i navigasjonen" },
-      "email": { "label": "E-post",  "note": "Sendes til din registrerte e-postadresse" },
-      "sms":   { "label": "SMS",     "note": "Sendes til ditt registrerte mobilnummer" }
+      "inApp": {
+        "label": "I appen",
+        "note": "Vises i varselbjølleikonet direkte i navigasjonen"
+      },
+      "email": {
+        "label": "E-post",
+        "note": "Sendes til din registrerte e-postadresse"
+      },
+      "sms": {
+        "label": "SMS",
+        "note": "Sendes til ditt registrerte mobilnummer"
+      }
     },
     "bell": {
-      "title":     "Varsler",
-      "new":       "nye",
-      "clearAll":  "Fjern alle",
-      "settings":  "Innstillinger",
-      "empty":     "Ingen varsler ennå",
+      "title": "Varsler",
+      "new": "nye",
+      "clearAll": "Fjern alle",
+      "settings": "Innstillinger",
+      "empty": "Ingen varsler ennå",
       "emptyHint": "Hendelser vises her i sanntid",
-      "total":     "{count, plural, one {# varsel totalt} other {# varsler totalt}}",
-      "justNow":   "Akkurat nå",
-      "minAgo":    "{n} min siden",
-      "hourAgo":   "{n} t siden",
-      "dayAgo":    "{n} dager siden"
+      "total": "{count, plural, one {# varsel totalt} other {# varsler totalt}}",
+      "justNow": "Akkurat nå",
+      "minAgo": "{n} min siden",
+      "hourAgo": "{n} t siden",
+      "dayAgo": "{n} dager siden"
     },
     "actions": {
-      "newLead":         { "title": "Nytt lead opprettet",            "interestedIn": "er interessert i" },
-      "agreementSigned": { "title": "Avtale signert av begge parter", "signedBy": "Kjøpsavtale signert av", "and": "og", "viaBankID": "via BankID" },
-      "paymentConfirmed":{ "title": "Betaling bekreftet",             "via": "via" }
+      "newLead": {
+        "title": "Nytt lead opprettet",
+        "interestedIn": "er interessert i"
+      },
+      "agreementSigned": {
+        "title": "Avtale signert av begge parter",
+        "signedBy": "Kjøpsavtale signert av",
+        "and": "og",
+        "viaBankID": "via BankID"
+      },
+      "paymentConfirmed": {
+        "title": "Betaling bekreftet",
+        "via": "via"
+      }
     }
   },
   "billing": {
@@ -940,77 +974,77 @@
     "cancelBack": "Behold abonnement",
     "cancelConfirmButton": "Ja, avslutt",
     "f": {
-      "users3":         "Opptil 3 brukere",
+      "users3": "Opptil 3 brukere",
       "usersUnlimited": "Ubegrenset antall brukere",
-      "leads50":        "50 leads / mnd",
+      "leads50": "50 leads / mnd",
       "leadsUnlimited": "Ubegrenset leads",
-      "bankid":         "BankID digital signering",
-      "basicPayments":  "Grunnleggende betalingsmetoder",
-      "allPayments":    "Alle betalingsmetoder",
-      "notifications":  "Sanntidsvarsler",
-      "emailSupport":   "E-poststøtte",
-      "api":            "API-tilgang",
-      "multiUser":      "Flerbrukerroller",
-      "prioritySupport":"Prioritetsstøtte"
+      "bankid": "BankID digital signering",
+      "basicPayments": "Grunnleggende betalingsmetoder",
+      "allPayments": "Alle betalingsmetoder",
+      "notifications": "Sanntidsvarsler",
+      "emailSupport": "E-poststøtte",
+      "api": "API-tilgang",
+      "multiUser": "Flerbrukerroller",
+      "prioritySupport": "Prioritetsstøtte"
     }
   },
   "invoices": {
-    "breadcrumb":    "Fakturaer",
-    "title":         "Fakturabehandling",
-    "subtitle":      "Automatisk genererte fakturaer fra fullførte avtaler og betalinger",
+    "breadcrumb": "Fakturaer",
+    "title": "Fakturabehandling",
+    "subtitle": "Automatisk genererte fakturaer fra fullførte avtaler og betalinger",
     "searchPlaceholder": "Søk etter kunde, kjøretøy eller fakturanummer…",
-    "filterAll":     "Alle",
-    "filterPaid":    "Betalte",
+    "filterAll": "Alle",
+    "filterPaid": "Betalte",
     "filterPending": "Ventende",
-    "statTotal":     "Total omsetning",
-    "statCount":     "Totalt fakturaer",
-    "statPaid":      "Betalte",
-    "statPending":   "Ventende",
-    "colInvoice":    "Faktura",
-    "colDate":       "Dato",
-    "colCustomer":   "Kunde",
-    "colVehicle":    "Kjøretøy",
-    "colAgreement":  "Avtale",
-    "colMethod":     "Betaling",
-    "colAmount":     "Beløp",
-    "colStatus":     "Status",
-    "colActions":    "Handlinger",
-    "badgePaid":     "Betalt",
-    "badgePending":  "Ventende",
-    "printBtn":      "Skriv ut",
-    "empty":         "Ingen fakturaer funnet",
-    "emptyHint":     "Fakturaer opprettes automatisk når en betaling fullføres.",
-    "printTitle":    "Faktura",
-    "printClose":    "Lukk",
-    "printPrint":    "Skriv ut",
-    "printIssued":   "Fakturadato",
-    "printPaid":     "Betalingsdato",
-    "printMethod":   "Betalingsmetode",
+    "statTotal": "Total omsetning",
+    "statCount": "Totalt fakturaer",
+    "statPaid": "Betalte",
+    "statPending": "Ventende",
+    "colInvoice": "Faktura",
+    "colDate": "Dato",
+    "colCustomer": "Kunde",
+    "colVehicle": "Kjøretøy",
+    "colAgreement": "Avtale",
+    "colMethod": "Betaling",
+    "colAmount": "Beløp",
+    "colStatus": "Status",
+    "colActions": "Handlinger",
+    "badgePaid": "Betalt",
+    "badgePending": "Ventende",
+    "printBtn": "Skriv ut",
+    "empty": "Ingen fakturaer funnet",
+    "emptyHint": "Fakturaer opprettes automatisk når en betaling fullføres.",
+    "printTitle": "Faktura",
+    "printClose": "Lukk",
+    "printPrint": "Skriv ut",
+    "printIssued": "Fakturadato",
+    "printPaid": "Betalingsdato",
+    "printMethod": "Betalingsmetode",
     "printCustomer": "Kunde",
-    "printVehicle":  "Kjøretøy",
-    "printAgreement":"Avtaleref",
-    "printDesc":     "Salg av kjøretøy per kjøpsavtale",
-    "printNet":      "Nettobeløp (eks. mva)",
-    "printVat":      "MVA 25%",
-    "printTotal":    "Totalt inkl. mva",
-    "printStatus":   "Status",
-    "printFooter":   "{dealerName} • Org.nr {orgNr} • {city} • {email}"
+    "printVehicle": "Kjøretøy",
+    "printAgreement": "Avtaleref",
+    "printDesc": "Salg av kjøretøy per kjøpsavtale",
+    "printNet": "Nettobeløp (eks. mva)",
+    "printVat": "MVA 25%",
+    "printTotal": "Totalt inkl. mva",
+    "printStatus": "Status",
+    "printFooter": "{dealerName} • Org.nr {orgNr} • {city} • {email}"
   },
   "invite": {
-    "title":              "Du har blitt invitert",
-    "by":                 "Invitert av {dealershipName}",
-    "expired":            "Ugyldig eller utløpt invitasjon",
-    "expiredDesc":        "Denne lenken er ikke lenger gyldig. Kontakt administratoren for en ny invitasjon.",
-    "verify":             "Bekreft med BankID",
-    "verifyDesc":         "Bekreft din identitet for å aktivere kontoen din.",
-    "success":            "Konto aktivert!",
-    "successDesc":        "Omdirigerer til dashbordet...",
-    "labelName":          "Navn",
-    "labelEmail":         "E-post",
-    "labelRole":          "Rolle",
-    "labelCompany":       "Selskap",
-    "goToLogin":          "Gå til innlogging",
+    "title": "Du har blitt invitert",
+    "by": "Invitert av {dealershipName}",
+    "expired": "Ugyldig eller utløpt invitasjon",
+    "expiredDesc": "Denne lenken er ikke lenger gyldig. Kontakt administratoren for en ny invitasjon.",
+    "verify": "Bekreft med BankID",
+    "verifyDesc": "Bekreft din identitet for å aktivere kontoen din.",
+    "success": "Konto aktivert!",
+    "successDesc": "Omdirigerer til dashbordet...",
+    "labelName": "Navn",
+    "labelEmail": "E-post",
+    "labelRole": "Rolle",
+    "labelCompany": "Selskap",
+    "goToLogin": "Gå til innlogging",
     "alreadyHaveAccount": "Har du allerede en konto?",
-    "loginLink":          "Logg inn"
+    "loginLink": "Logg inn"
   }
 }
