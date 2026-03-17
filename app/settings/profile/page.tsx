@@ -23,6 +23,7 @@ interface DealershipProfile {
   county:            string;
   phone:             string;
   email:             string;
+  emailDomain:       string;   // e.g. "avamc.se" — shared by all staff at this dealership
   website:           string;
   bankgiro:          string;
   swish:             string;
@@ -49,6 +50,7 @@ const DEFAULTS: DealershipProfile = {
   county:      'Stockholm',
   phone:       '',
   email:       '',
+  emailDomain: '',
   website:     '',
   bankgiro:    '',
   swish:       '',
@@ -166,6 +168,7 @@ async function fetchProfileFromSupabase(dealershipId: string): Promise<Partial<D
     county:            data.county            ?? 'Stockholm',
     phone:             data.phone             ?? '',
     email:             data.email             ?? '',
+    emailDomain:       data.email_domain      ?? '',
     website:           data.website           ?? '',
     bankgiro:          data.bankgiro          ?? '',
     swish:             data.swish             ?? '',
@@ -190,6 +193,7 @@ async function saveProfileToSupabase(dealershipId: string, profile: DealershipPr
       county:               profile.county,
       phone:                profile.phone,
       email:                profile.email,
+      email_domain:         profile.emailDomain,
       website:              profile.website,
       bankgiro:             profile.bankgiro,
       swish:                profile.swish,
@@ -566,6 +570,21 @@ export default function DealershipProfilePage() {
                   placeholder="info@avamc.se"
                   type="email"
                 />
+              </Field>
+              <Field
+                label="Företagets e-postdomän"
+                hint="Används när ni bjuder in personal — t.ex. avamc.se ger @avamc.se"
+              >
+                <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-[#FF6B2C]/30 focus-within:border-[#FF6B2C] transition-all bg-white">
+                  <span className="px-3 text-sm text-slate-400 select-none">@</span>
+                  <input
+                    type="text"
+                    value={profile.emailDomain}
+                    onChange={e => setProfile(p => ({ ...p, emailDomain: e.target.value.toLowerCase().replace(/^@/, '') }))}
+                    placeholder="avamc.se"
+                    className="flex-1 py-2.5 pr-3 text-sm text-slate-900 bg-transparent outline-none font-mono"
+                  />
+                </div>
               </Field>
               <Field label="Hemsida">
                 <Input

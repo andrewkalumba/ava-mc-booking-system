@@ -90,12 +90,13 @@ export default function UsersSettingsPage() {
   const [avatarUrl, setAvatarUrl]     = useState<string | null>(null);
 
   // Invite form state
-  const [showInvite,   setShowInvite]   = useState(false);
-  const [inviteName,   setInviteName]   = useState('');
-  const [inviteEmail,  setInviteEmail]  = useState('');
-  const [inviteRole,   setInviteRole]   = useState<Role>('sales');
-  const [inviteLink,   setInviteLink]   = useState('');
+  const [showInvite,    setShowInvite]    = useState(false);
+  const [inviteName,    setInviteName]    = useState('');
+  const [inviteEmail,   setInviteEmail]   = useState('');
+  const [inviteRole,    setInviteRole]    = useState<Role>('sales');
+  const [inviteLink,    setInviteLink]    = useState('');
   const [inviteSending, setInviteSending] = useState(false);
+  const [emailDomain,   setEmailDomain]   = useState('');
 
   // Selected user for permission preview
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
@@ -111,6 +112,12 @@ export default function UsersSettingsPage() {
     }
     setCurrentUser(u);
     setAvatarUrl(u.avatarDataUrl || null);
+
+    // Load dealership email domain from saved profile
+    try {
+      const profile = JSON.parse(localStorage.getItem('dealership_profile') ?? '{}');
+      if (profile.emailDomain) setEmailDomain(profile.emailDomain);
+    } catch { /* ignore */ }
 
     const dealershipId = u.dealershipId ?? '';
     (async () => {
@@ -604,15 +611,47 @@ export default function UsersSettingsPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1.5">E-postadress</label>
-                  <input
-                    type="email"
-                    value={inviteEmail}
-                    onChange={e => setInviteEmail(e.target.value)}
-                    required
-                    placeholder="anna@dealership.se"
-                    className="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-[#FF6B2C] focus:ring-1 focus:ring-[#FF6B2C]/20"
-                  />
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                    E-postadress
+                    {emailDomain && (
+                      <span className="ml-2 text-[10px] font-bold bg-[#FF6B2C]/10 text-[#FF6B2C] px-2 py-0.5 rounded-full">
+                        @{emailDomain}
+                      </span>
+                    )}
+                  </label>
+                  {emailDomain ? (
+                    /* Split input: [username] @ [domain] */
+                    <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden focus-within:border-[#FF6B2C] focus-within:ring-1 focus-within:ring-[#FF6B2C]/20">
+                      <input
+                        type="text"
+                        value={inviteEmail.replace(`@${emailDomain}`, '')}
+                        onChange={e => {
+                          const local = e.target.value.replace(/@.*/, '');
+                          setInviteEmail(local ? `${local}@${emailDomain}` : '');
+                        }}
+                        required
+                        placeholder="anna"
+                        className="flex-1 px-3 py-2.5 text-sm bg-white outline-none"
+                      />
+                      <span className="px-3 py-2.5 text-sm text-slate-400 bg-slate-50 border-l border-slate-200 select-none font-mono">
+                        @{emailDomain}
+                      </span>
+                    </div>
+                  ) : (
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={e => setInviteEmail(e.target.value)}
+                      required
+                      placeholder="anna@dealership.se"
+                      className="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-sm focus:outline-none focus:border-[#FF6B2C] focus:ring-1 focus:ring-[#FF6B2C]/20"
+                    />
+                  )}
+                  {emailDomain && (
+                    <p className="text-xs text-slate-400 mt-1">
+                      Alla användare hos {currentUser?.dealershipName ?? 'er dealership'} använder <span className="font-mono">@{emailDomain}</span>
+                    </p>
+                  )}
                 </div>
 
                 <div>
