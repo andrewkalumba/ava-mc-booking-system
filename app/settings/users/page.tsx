@@ -113,28 +113,28 @@ export default function UsersSettingsPage() {
     setCurrentUser(u);
     setAvatarUrl(u.avatarDataUrl || null);
 
-    // Load dealership email domain — Supabase first, localStorage cache as fallback
-    try {
-      const { data: dsRow } = await getSupabaseBrowser()
-        .from('dealership_settings')
-        .select('email_domain')
-        .eq('dealership_id', u.dealershipId ?? '')
-        .maybeSingle() as { data: { email_domain: string } | null };
-      if (dsRow?.email_domain) {
-        setEmailDomain(dsRow.email_domain);
-      } else {
-        const profile = JSON.parse(localStorage.getItem('dealership_profile') ?? '{}');
-        if (profile.emailDomain) setEmailDomain(profile.emailDomain);
-      }
-    } catch {
-      try {
-        const profile = JSON.parse(localStorage.getItem('dealership_profile') ?? '{}');
-        if (profile.emailDomain) setEmailDomain(profile.emailDomain);
-      } catch { /* ignore */ }
-    }
-
     const dealershipId = u.dealershipId ?? '';
     (async () => {
+      // Load dealership email domain — Supabase first, localStorage cache as fallback
+      try {
+        const { data: dsRow } = await getSupabaseBrowser()
+          .from('dealership_settings')
+          .select('email_domain')
+          .eq('dealership_id', dealershipId)
+          .maybeSingle() as { data: { email_domain: string } | null };
+        if (dsRow?.email_domain) {
+          setEmailDomain(dsRow.email_domain);
+        } else {
+          const profile = JSON.parse(localStorage.getItem('dealership_profile') ?? '{}');
+          if (profile.emailDomain) setEmailDomain(profile.emailDomain);
+        }
+      } catch {
+        try {
+          const profile = JSON.parse(localStorage.getItem('dealership_profile') ?? '{}');
+          if (profile.emailDomain) setEmailDomain(profile.emailDomain);
+        } catch { /* ignore */ }
+      }
+
       if (dealershipId) {
         const remote = await fetchRemoteUsers(dealershipId);
         if (remote.length > 0) {
