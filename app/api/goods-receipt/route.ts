@@ -43,8 +43,9 @@ function normaliseDate(raw: string): string | null {
 // ── PDF text extractor (server-side, no external API) ─────────────────────────
 
 async function extractTextFromPDF(pdfBase64: string): Promise<string> {
-    const mod      = await import('pdf-parse')
-    const pdfParse = (mod.default ?? mod) as (buf: Buffer) => Promise<{ text: string }>
+    // pdf-parse ships as CJS; use require() to avoid ESM .default issues on Vercel
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const pdfParse = require('pdf-parse') as (buf: Buffer) => Promise<{ text: string }>
     const buffer   = Buffer.from(pdfBase64, 'base64')
     const result   = await pdfParse(buffer)
     return result.text
